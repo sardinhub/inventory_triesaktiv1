@@ -149,8 +149,18 @@ window.openEditAsset = function(id) {
 };
 
 window.deleteAsset = async function(id) {
-    if(confirm(`Yakin ingin menghapus aset ${id} secara permanen?`)) {
+    const res = await Swal.fire({
+        title: 'Hapus Aset?',
+        text: `Anda yakin ingin menghapus ${id} secara permanen?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        cancelButtonColor: '#6B7280',
+        confirmButtonText: 'Ya, Hapus!'
+    });
+    if(res.isConfirmed) {
         await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Data aset berhasil dihapus.', 'success');
         fetchData(); // Refresh UI
     }
 };
@@ -183,8 +193,16 @@ window.renderCategoriesTable = function() {
 };
 
 window.deleteCategory = async function(id) {
-    if(confirm('Yakin hapus kategori ini?')) {
+    const res = await Swal.fire({
+        title: 'Hapus Kategori?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Hapus'
+    });
+    if(res.isConfirmed) {
         await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Kategori telah dihapus.', 'success');
         const resCats = await fetch('/api/categories');
         categories = await resCats.json();
         renderCategories();
@@ -206,8 +224,17 @@ window.openUsersModal = async function() {
 };
 
 window.deleteUser = async function(id) {
-    if(confirm('Yakin hapus user ini?')) {
+    const res = await Swal.fire({
+        title: 'Cabut Akses?',
+        text: "User ini tidak akan bisa login lagi.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Hapus Akses'
+    });
+    if(res.isConfirmed) {
         await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        Swal.fire('Berhasil!', 'Akses user telah dicabut.', 'success');
         openUsersModal(); // reload table
     }
 };
@@ -411,6 +438,17 @@ document.addEventListener("DOMContentLoaded", () => {
     // POST: Tambah Aset
     document.getElementById('addAssetForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const conf = await Swal.fire({
+            title: 'Simpan Data Aset?',
+            text: "Pastikan data yang Anda masukkan sudah benar.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4F46E5',
+            confirmButtonText: 'Ya, Simpan!'
+        });
+        if(!conf.isConfirmed) return;
+
         const data = {
             id: `INV-${document.getElementById('assetCategory').value.substring(0,3).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
             name: document.getElementById('assetName').value,
@@ -422,12 +460,23 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('addAssetModal').classList.remove('active');
+        Swal.fire('Tersimpan!', 'Aset baru berhasil ditambahkan.', 'success');
         fetchData();
     });
 
     // PUT: Edit Aset
     document.getElementById('editAssetForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const conf = await Swal.fire({
+            title: 'Terapkan Perubahan?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4F46E5',
+            confirmButtonText: 'Ya, Perbarui!'
+        });
+        if(!conf.isConfirmed) return;
+
         const id = document.getElementById('editAssetId').value;
         const data = {
             name: document.getElementById('editAssetName').value,
@@ -439,12 +488,17 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         await fetch(`/api/assets/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('editAssetModal').classList.remove('active');
+        Swal.fire('Diperbarui!', 'Perubahan aset berhasil disimpan.', 'success');
         fetchData();
     });
 
     // POST: Buat Request Peminjaman
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const conf = await Swal.fire({ title: 'Ajukan Peminjaman?', icon: 'question', showCancelButton: true, confirmButtonText: 'Ajukan' });
+        if(!conf.isConfirmed) return;
+
         const data = {
             id: `REQ-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
             asset_id: document.getElementById('borrowItem').value,
@@ -455,6 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         await fetch('/api/borrows', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('borrowModal').classList.remove('active');
+        Swal.fire('Terkirim!', 'Permintaan peminjaman sedang diproses.', 'success');
         fetchData();
     });
 
