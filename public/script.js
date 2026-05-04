@@ -350,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 errEl.style.display = 'none';
                 initApp();
             } else {
-                errEl.innerText = data.message;
+                errEl.innerText = data.error || data.message || "Login Gagal!";
                 errEl.style.display = 'block';
             }
         } catch(e) { errEl.innerText = "Koneksi ke server terputus."; errEl.style.display = 'block'; }

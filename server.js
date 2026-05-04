@@ -163,6 +163,43 @@ app.delete('/api/categories/:id', (req, res) => {
     });
 });
 
+// --- DATABASE INITIALIZER (Untuk Vercel Serverless) ---
+app.get('/api/init', (req, res) => {
+    try {
+        db.run(`CREATE TABLE IF NOT EXISTS assets (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), condition VARCHAR(50), status VARCHAR(50), location VARCHAR(100), owner VARCHAR(100))`);
+        db.run(`CREATE TABLE IF NOT EXISTS borrows (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, borrower VARCHAR(100), purpose TEXT, date_req VARCHAR(50), status VARCHAR(50))`);
+        db.run(`CREATE TABLE IF NOT EXISTS tickets (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, issue_desc TEXT, priority VARCHAR(50), status VARCHAR(50))`);
+        db.run(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(50) NOT NULL, name VARCHAR(100) NOT NULL)`);
+        db.run(`CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL)`);
+
+        setTimeout(() => {
+            db.get("SELECT COUNT(*) AS count FROM users", (err, row) => {
+                if (row && parseInt(row.count) === 0) {
+                    db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["admin", "admin123", "Admin", "Admin Ops"]);
+                    db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["staf", "staf123", "Staff", "Staf Gudang"]);
+                }
+            });
+            db.get("SELECT COUNT(*) AS count FROM categories", (err, row) => {
+                if (row && parseInt(row.count) === 0) {
+                    db.run("INSERT INTO categories (name) VALUES (?)", ["Elektronik"]);
+                    db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
+                    db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
+                    db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
+                }
+            });
+            db.get("SELECT COUNT(*) AS count FROM assets", (err, row) => {
+                if (row && parseInt(row.count) === 0) {
+                    db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso"]);
+                }
+            });
+        }, 1500);
+
+        res.json({ success: true, message: "Database sedang diinisialisasi! Silakan tunggu 3 detik, lalu kembali ke halaman login." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server Inventarisasi berjalan di: http://localhost:${PORT}`);
 });
