@@ -240,24 +240,55 @@ window.deleteUser = async function(id) {
 };
 
 // --- QR SCANNER LOGIC ---
+window.isScanningLocked = false;
+
 window.simulateQrScan = function() {
     const input = document.getElementById('manualQrInput').value.trim();
-    if(!input) return alert("Masukkan ID Aset terlebih dahulu!");
-    const a = assets.find(x => x.id.toLowerCase() === input.toLowerCase());
-    if(a) {
-        viewAsset(a.id);
-    } else {
-        alert("❌ Aset tidak ditemukan dalam database.");
-    }
+    if(!input) return Swal.fire('Peringatan', 'Masukkan ID Aset terlebih dahulu!', 'warning');
+    onScanSuccess(input);
+    document.getElementById('manualQrInput').value = '';
 };
 
 function onScanSuccess(decodedText) {
-    const a = assets.find(x => x.id.toLowerCase() === decodedText.toLowerCase());
+    if(window.isScanningLocked) return;
+    window.isScanningLocked = true;
+    
+    // Membunyikan suara "Beep" kasir yang profesional
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.type = 'sine'; osc.frequency.value = 880;
+        osc.connect(ctx.destination);
+        osc.start(); osc.stop(ctx.currentTime + 0.1);
+    } catch(e) {}
+
+    const inputVal = decodedText.trim();
+    const a = assets.find(x => x.id.toLowerCase() === inputVal.toLowerCase());
+    
     if(a) {
-        if(html5QrcodeScanner) html5QrcodeScanner.clear(); // Hentikan scanner sementara buka modal
+        Swal.fire({
+            toast: true, position: 'top-end', showConfirmButton: false, timer: 1500,
+            icon: 'success', title: `Aset ${a.id} Ditemukan!`
+        });
         viewAsset(a.id);
+        
+        // Kunci scanner hingga modal ditutup agar tidak mendeteksi ganda
+        const checkClose = setInterval(() => {
+            if(!document.getElementById('viewAssetModal').classList.contains('active')) {
+                clearInterval(checkClose);
+                setTimeout(() => { window.isScanningLocked = false; }, 1000); // jeda 1 detik ekstra
+            }
+        }, 500);
     } else {
-        console.warn(`Scan error: ${decodedText} tidak ditemukan.`);
+        Swal.fire({
+            title: 'Tidak Dikenali',
+            text: `QR Code [${inputVal}] bukan merupakan aset dari gudang kita.`,
+            icon: 'error',
+            confirmButtonColor: '#EF4444',
+            confirmButtonText: 'Tutup'
+        }).then(() => {
+            setTimeout(() => { window.isScanningLocked = false; }, 1000);
+        });
     }
 }
 
