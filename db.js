@@ -5,7 +5,7 @@ require('dotenv').config();
 const connString = process.env.POSTGRES_URL || 
                    process.env.DATABASE_URL || 
                    process.env.NEON_DATABASE_URL || 
-                   Object.values(process.env).find(val => typeof val === 'string' && val.startsWith('postgres://'));
+                   "postgresql://neondb_owner:npg_leLDznq59sSO@ep-noisy-tooth-aozt34x3-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require";
 
 const pool = new Pool({
   connectionString: connString,
