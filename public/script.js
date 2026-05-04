@@ -1,0 +1,503 @@
+let currentUser = null;
+let assets = [];
+let borrows = [];
+let tickets = [];
+let categories = [];
+let users = [];
+let statusChartObj = null;
+let categoryChartObj = null;
+let html5QrcodeScanner = null;
+
+// --- API FETCHERS ---
+async function fetchData() {
+    try {
+        const [resAssets, resBorrows, resTickets, resCats] = await Promise.all([
+            fetch('/api/assets'), fetch('/api/borrows'), fetch('/api/tickets'), fetch('/api/categories')
+        ]);
+        assets = await resAssets.json();
+        borrows = await resBorrows.json();
+        tickets = await resTickets.json();
+        categories = await resCats.json();
+        
+        renderCategories();
+        renderAssets();
+        renderBorrows();
+        renderTickets();
+        updateDashboardCards();
+        renderCharts();
+    } catch(err) { 
+        console.error("Error fetching data:", err); 
+        if(err.message.includes('401')) logout();
+    }
+}
+
+function updateDashboardCards() {
+    document.getElementById('count-total').innerText = assets.length;
+    document.getElementById('count-tersedia').innerText = assets.filter(a => a.status === 'Tersedia').length;
+    document.getElementById('count-dipinjam').innerText = assets.filter(a => a.status === 'Dipinjam').length;
+    document.getElementById('count-rusak').innerText = assets.filter(a => a.condition === 'Rusak').length;
+}
+
+// --- RENDERERS ---
+function getConditionBadge(cond) { return cond==="Bagus"?`<span class="pill pill-success">Bagus</span>`:`<span class="pill pill-danger">Rusak</span>`; }
+function getStatusBadge(stat) {
+    if(["Tersedia","Approved","Resolved"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
+    if(["Dipinjam","Menunggu Approval","Open","Sedang"].includes(stat)) return `<span class="pill pill-warning">${stat}</span>`;
+    if(["Servis","Tinggi (Mendesak)"].includes(stat)) return `<span class="pill pill-danger">${stat}</span>`;
+    if(["Sedang Digunakan"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
+    return `<span class="pill pill-info">${stat}</span>`;
+}
+
+function renderCategories() {
+    const opts = categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+    const addCat = document.getElementById('assetCategory');
+    const editCat = document.getElementById('editAssetCategory');
+    if(addCat) addCat.innerHTML = `<option value="" disabled selected>Pilih Kategori</option>` + opts;
+    if(editCat) editCat.innerHTML = opts;
+}
+
+function renderAssets() {
+    const dBody = document.querySelector(".dashboard-tbody");
+    const aBody = document.querySelector(".daftar-aset-tbody");
+    const rows = assets.map(a => `
+        <tr>
+            <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
+            <td class="asset-name">${a.name}</td>
+            <td>${a.category}</td>
+            <td>${getConditionBadge(a.condition)}</td>
+            <td>${getStatusBadge(a.status)}</td>
+            <td><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
+            <td style="font-weight: 500;">${a.owner}</td>
+            <td>
+                <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
+                ${currentUser && currentUser.role === 'Admin' ? `
+                <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                ` : ''}
+            </td>
+        </tr>
+    `).join('');
+    if(dBody) dBody.innerHTML = rows;
+    if(aBody) aBody.innerHTML = rows;
+}
+
+function renderBorrows() {
+    const tbody = document.getElementById("peminjaman-tbody");
+    if(!tbody) return;
+    tbody.innerHTML = borrows.map(b => `
+        <tr>
+            <td style="font-family: monospace; font-weight:bold;">${b.id}</td>
+            <td style="font-weight:500;">${b.borrower_name}</td>
+            <td>${b.asset_id} <br><small style="color:var(--text-muted)">${b.asset_name || ''}</small></td>
+            <td>${b.request_date}</td>
+            <td>${getStatusBadge(b.status)}</td>
+            <td>
+                ${b.status === 'Menunggu Approval' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 12px; font-size:12px;"><i class="fa-solid fa-check"></i> Approve</button>` : `<span style="font-size:12px; color:var(--text-muted);">Selesai</span>`}
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderTickets() {
+    const tbody = document.getElementById("maintenance-tbody");
+    if(!tbody) return;
+    tbody.innerHTML = tickets.map(t => `
+        <tr>
+            <td style="font-family: monospace; font-weight:bold;">${t.id}</td>
+            <td style="font-weight:500;">${t.asset_id} <br><small style="color:var(--text-muted)">${t.asset_name || ''}</small></td>
+            <td>${t.issue_desc}</td>
+            <td>${getStatusBadge(t.priority)}</td>
+            <td>${getStatusBadge(t.status)}</td>
+            <td>
+                ${t.status === 'Open' ? `<button class="secondary-btn" onclick="resolveTicket('${t.id}')" style="padding: 4px 12px; font-size:12px;"><i class="fa-solid fa-check"></i> Selesai</button>` : `<span style="font-size:12px; color:var(--text-muted);">Tuntas</span>`}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// --- GLOBAL ACTIONS (Dipanggil dari HTML onclick) ---
+window.viewAsset = function(id) {
+    const a = assets.find(x => x.id === id);
+    if(!a) return;
+    document.getElementById('viewAssetTitle').innerText = "Detail: " + a.name;
+    document.getElementById('viewAssetContent').innerHTML = `
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>ID Aset:</strong> <span style="float:right; color:var(--primary); font-family:monospace; font-weight:bold;">${a.id}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kategori:</strong> <span style="float:right;">${a.category}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kondisi:</strong> <span style="float:right;">${getConditionBadge(a.condition)}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Status:</strong> <span style="float:right;">${getStatusBadge(a.status)}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Lokasi:</strong> <span style="float:right;">${a.location}</span></div>
+        <div style="margin-bottom: 8px;"><strong>PIC:</strong> <span style="float:right; font-weight:500;">${a.owner}</span></div>
+        <div style="margin-top:20px; text-align:center;">
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${a.id}" alt="QR Code" style="border-radius:12px; padding:8px; border:1px solid var(--border); background:white;">
+            <p style="font-size:12px; margin-top:8px; color:var(--text-muted);">Scan QR Code ini untuk akses cepat via mobile</p>
+        </div>
+    `;
+    document.getElementById('viewAssetModal').classList.add('active');
+};
+
+window.openEditAsset = function(id) {
+    const a = assets.find(x => x.id === id);
+    if(!a) return;
+    document.getElementById('editAssetId').value = a.id;
+    document.getElementById('editAssetName').value = a.name;
+    document.getElementById('editAssetCategory').value = a.category;
+    document.getElementById('editAssetCondition').value = a.condition;
+    document.getElementById('editAssetStatus').value = a.status;
+    document.getElementById('editAssetLocation').value = a.location;
+    document.getElementById('editAssetOwner').value = a.owner;
+    document.getElementById('editAssetModal').classList.add('active');
+};
+
+window.deleteAsset = async function(id) {
+    if(confirm(`Yakin ingin menghapus aset ${id} secara permanen?`)) {
+        await fetch(`/api/assets/${id}`, { method: 'DELETE' });
+        fetchData(); // Refresh UI
+    }
+};
+
+window.approveBorrow = async function(id) {
+    await fetch(`/api/borrows/${id}/approve`, { method: 'PUT' });
+    fetchData(); // Refresh everything since asset status also changes
+};
+
+window.resolveTicket = async function(id) {
+    await fetch(`/api/tickets/${id}/resolve`, { method: 'PUT' });
+    fetchData(); 
+};
+
+// --- MASTER DATA & USERS MANAGEMENT ---
+window.openCategoriesModal = async function() {
+    document.getElementById('categoriesModal').classList.add('active');
+    renderCategoriesTable();
+};
+
+window.renderCategoriesTable = function() {
+    const tbody = document.getElementById('categories-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = categories.map(c => `
+        <tr>
+            <td>${c.name}</td>
+            <td><button class="action-btn" onclick="deleteCategory(${c.id})" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+    `).join('');
+};
+
+window.deleteCategory = async function(id) {
+    if(confirm('Yakin hapus kategori ini?')) {
+        await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+        const resCats = await fetch('/api/categories');
+        categories = await resCats.json();
+        renderCategories();
+        renderCategoriesTable();
+    }
+};
+
+window.openUsersModal = async function() {
+    document.getElementById('usersModal').classList.add('active');
+    const res = await fetch('/api/users');
+    users = await res.json();
+    const tbody = document.getElementById('users-tbody');
+    tbody.innerHTML = users.map(u => `
+        <tr>
+            <td>${u.name}</td><td>${u.username}</td><td>${getStatusBadge(u.role)}</td>
+            <td>${u.username !== 'admin' ? `<button class="action-btn" onclick="deleteUser(${u.id})" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>` : ''}</td>
+        </tr>
+    `).join('');
+};
+
+window.deleteUser = async function(id) {
+    if(confirm('Yakin hapus user ini?')) {
+        await fetch(`/api/users/${id}`, { method: 'DELETE' });
+        openUsersModal(); // reload table
+    }
+};
+
+// --- QR SCANNER LOGIC ---
+window.simulateQrScan = function() {
+    const input = document.getElementById('manualQrInput').value.trim();
+    if(!input) return alert("Masukkan ID Aset terlebih dahulu!");
+    const a = assets.find(x => x.id.toLowerCase() === input.toLowerCase());
+    if(a) {
+        viewAsset(a.id);
+    } else {
+        alert("❌ Aset tidak ditemukan dalam database.");
+    }
+};
+
+function onScanSuccess(decodedText) {
+    const a = assets.find(x => x.id.toLowerCase() === decodedText.toLowerCase());
+    if(a) {
+        if(html5QrcodeScanner) html5QrcodeScanner.clear(); // Hentikan scanner sementara buka modal
+        viewAsset(a.id);
+    } else {
+        console.warn(`Scan error: ${decodedText} tidak ditemukan.`);
+    }
+}
+
+// --- CHART RENDERING (LAPORAN) ---
+function renderCharts() {
+    const ctxStatus = document.getElementById('statusChart');
+    const ctxCat = document.getElementById('categoryChart');
+    if(!ctxStatus || !ctxCat) return;
+    
+    // Status Aggregation
+    const countsStatus = { 'Tersedia': 0, 'Dipinjam': 0, 'Servis': 0, 'Sedang Digunakan': 0 };
+    assets.forEach(a => { if(countsStatus[a.status] !== undefined) countsStatus[a.status]++; });
+    
+    if(statusChartObj) statusChartObj.destroy();
+    statusChartObj = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+            labels: ['Tersedia', 'Dipinjam', 'Servis', 'Digunakan'],
+            datasets: [{
+                data: [countsStatus['Tersedia'], countsStatus['Dipinjam'], countsStatus['Servis'], countsStatus['Sedang Digunakan']],
+                backgroundColor: ['#10B981', '#F59E0B', '#EF4444', '#3B82F6'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, cutout: '70%' }
+    });
+
+    // Category Aggregation
+    const countsCat = {};
+    assets.forEach(a => { countsCat[a.category] = (countsCat[a.category]||0) + 1; });
+    
+    if(categoryChartObj) categoryChartObj.destroy();
+    categoryChartObj = new Chart(ctxCat, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(countsCat),
+            datasets: [{
+                label: 'Jumlah Aset',
+                data: Object.values(countsCat),
+                backgroundColor: '#4F46E5',
+                borderRadius: 4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+}
+
+// --- EXPORT TO CSV ---
+window.exportToCSV = function() {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "ID Aset,Nama Barang,Kategori,Kondisi,Status,Lokasi,Peminjam\n";
+    assets.forEach(a => {
+        csvContent += `"${a.id}","${a.name}","${a.category}","${a.condition}","${a.status}","${a.location}","${a.owner}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "Laporan_Aset_Kantor.csv");
+    document.body.appendChild(link);
+    link.click();
+};
+
+// --- AUTHENTICATION & INITIALIZATION ---
+function initApp() {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('main-app').style.display = 'flex';
+    
+    // Update User Profile UI
+    document.getElementById('userNameDisplay').innerText = currentUser.name;
+    document.getElementById('userRoleDisplay').innerText = currentUser.role;
+    document.getElementById('userAvatar').src = `https://ui-avatars.com/api/?name=${currentUser.name.replace(' ','+')}&background=0D8ABC&color=fff`;
+
+    // Apply Role Restrictions
+    if(currentUser.role !== 'Admin') {
+        const navPengaturan = document.getElementById('nav-pengaturan');
+        if(navPengaturan) navPengaturan.style.display = 'none';
+        
+        document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+    }
+
+    fetchData(); // Load all DB records
+}
+
+window.logout = function() {
+    localStorage.removeItem('inv_user');
+    window.location.reload();
+};
+
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Check Login Auth
+    const savedUser = localStorage.getItem('inv_user');
+    if(savedUser) {
+        currentUser = JSON.parse(savedUser);
+        initApp();
+    } else {
+        document.getElementById('login-screen').style.display = 'flex';
+        document.getElementById('main-app').style.display = 'none';
+    }
+
+    // Login Form Submit
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const u = document.getElementById('loginUsername').value;
+        const p = document.getElementById('loginPassword').value;
+        const errEl = document.getElementById('loginError');
+        
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username: u, password: p})
+            });
+            const data = await res.json();
+            
+            if(data.success) {
+                currentUser = data.user;
+                localStorage.setItem('inv_user', JSON.stringify(currentUser));
+                errEl.style.display = 'none';
+                initApp();
+            } else {
+                errEl.innerText = data.message;
+                errEl.style.display = 'block';
+            }
+        } catch(e) { errEl.innerText = "Koneksi ke server terputus."; errEl.style.display = 'block'; }
+    });
+    
+    // SPA Navigation
+    const navItems = document.querySelectorAll('.nav-item');
+    const views = document.querySelectorAll('.app-view');
+    navItems.forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            navItems.forEach(nav => nav.classList.remove('active'));
+            item.classList.add('active');
+            views.forEach(view => view.style.display = 'none');
+            
+            const targetId = item.getAttribute('data-target');
+            document.getElementById(targetId).style.display = 'block';
+            
+            // Re-render chart if switching to laporan
+            if(targetId === 'view-laporan') renderCharts();
+            
+            // Auto-start QR Scanner if switching to Scan QR
+            if(targetId === 'view-scan-qr' && typeof Html5QrcodeScanner !== 'undefined') {
+                if(!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5QrcodeScanner("qr-reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+                    html5QrcodeScanner.render(onScanSuccess);
+                }
+            } else if(html5QrcodeScanner && targetId !== 'view-scan-qr') {
+                // Good practice to clear scanner when not in view
+                try { html5QrcodeScanner.clear(); html5QrcodeScanner = null; } catch(e){}
+            }
+        });
+    });
+
+    // Modals Initialization
+    function setupModal(triggerSelectors, modalId, closeSelectors) {
+        const triggers = document.querySelectorAll(triggerSelectors);
+        const modal = document.getElementById(modalId);
+        if(!modal) return;
+        const closers = document.querySelectorAll(closeSelectors);
+        
+        triggers.forEach(t => t.addEventListener('click', () => modal.classList.add('active')));
+        closers.forEach(c => c.addEventListener('click', () => {
+            modal.classList.remove('active');
+            const form = modal.querySelector('form');
+            if(form) setTimeout(() => form.reset(), 300);
+        }));
+    }
+
+    setupModal('.btn-tambah-aset', 'addAssetModal', '#addAssetModal .closeModalBtn');
+    setupModal('.btn-buat-peminjaman', 'borrowModal', '#borrowModal .closeBorrowBtn');
+    setupModal('.btn-buat-tiket', 'maintenanceModal', '#maintenanceModal .closeMaintBtn');
+    setupModal('.closeViewBtn', 'viewAssetModal', '.closeViewBtn');
+    setupModal('.closeEditBtn', 'editAssetModal', '.closeEditBtn');
+    setupModal('.closeUsersBtn', 'usersModal', '.closeUsersBtn');
+    setupModal('.closeCatBtn', 'categoriesModal', '.closeCatBtn');
+
+    // POST: Tambah Aset
+    document.getElementById('addAssetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            id: `INV-${document.getElementById('assetCategory').value.substring(0,3).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
+            name: document.getElementById('assetName').value,
+            category: document.getElementById('assetCategory').value,
+            condition: document.getElementById('assetCondition').value,
+            status: document.getElementById('assetStatus').value,
+            location: document.getElementById('assetLocation').value,
+            owner: document.getElementById('assetOwner').value || "-"
+        };
+        await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        document.getElementById('addAssetModal').classList.remove('active');
+        fetchData();
+    });
+
+    // PUT: Edit Aset
+    document.getElementById('editAssetForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editAssetId').value;
+        const data = {
+            name: document.getElementById('editAssetName').value,
+            category: document.getElementById('editAssetCategory').value,
+            condition: document.getElementById('editAssetCondition').value,
+            status: document.getElementById('editAssetStatus').value,
+            location: document.getElementById('editAssetLocation').value,
+            owner: document.getElementById('editAssetOwner').value || "-"
+        };
+        await fetch(`/api/assets/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        document.getElementById('editAssetModal').classList.remove('active');
+        fetchData();
+    });
+
+    // POST: Buat Request Peminjaman
+    document.getElementById('borrowForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            id: `REQ-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
+            asset_id: document.getElementById('borrowItem').value,
+            borrower_name: document.getElementById('borrowerName').value,
+            reason: document.getElementById('borrowReason').value,
+            request_date: new Date().toLocaleDateString('id-ID'),
+            status: "Menunggu Approval"
+        };
+        await fetch('/api/borrows', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        document.getElementById('borrowModal').classList.remove('active');
+        fetchData();
+    });
+
+    // POST: Buat Tiket Maintenance
+    document.getElementById('maintenanceForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            id: `TCK-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
+            asset_id: document.getElementById('maintItem').value,
+            issue_desc: document.getElementById('maintDesc').value,
+            priority: document.getElementById('maintPriority').value,
+            status: "Open"
+        };
+        await fetch('/api/tickets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        document.getElementById('maintenanceModal').classList.remove('active');
+        fetchData();
+    });
+
+    // POST: Tambah Kategori
+    document.getElementById('addCatForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('newCatName').value;
+        await fetch('/api/categories', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
+        document.getElementById('newCatName').value = "";
+        
+        // Refresh local categories
+        const resCats = await fetch('/api/categories');
+        categories = await resCats.json();
+        renderCategories();
+        renderCategoriesTable();
+    });
+
+    // POST: Tambah User
+    document.getElementById('addUserForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const data = {
+            name: document.getElementById('newUserName').value,
+            username: document.getElementById('newUserUsername').value,
+            password: document.getElementById('newUserPassword').value,
+            role: document.getElementById('newUserRole').value
+        };
+        await fetch('/api/users', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+        document.getElementById('addUserForm').reset();
+        openUsersModal(); // Refresh UI
+    });
+});

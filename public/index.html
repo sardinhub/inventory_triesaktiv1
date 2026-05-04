@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Inventarisasi Terpadu</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Pustaka Tambahan untuk fitur PRO -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Grafik -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script> <!-- QR Scanner -->
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- LAYAR LOGIN (OVERLAY) -->
+    <div id="login-screen">
+        <div class="login-box">
+            <div style="text-align: center; margin-bottom: 24px; color: var(--primary); font-size: 40px;">
+                <i class="fa-solid fa-user-lock"></i>
+            </div>
+            <h2 style="text-align:center; margin-bottom:8px;">Inventaris.io</h2>
+            <p style="text-align:center; color:var(--text-muted); margin-bottom:24px;">Silakan masukkan kredensial Anda</p>
+            
+            <form id="loginForm">
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="margin-bottom:8px; display:block;">Username</label>
+                    <input type="text" id="loginUsername" placeholder="admin / staf" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;" required>
+                </div>
+                <div class="form-group" style="margin-bottom:16px;">
+                    <label style="margin-bottom:8px; display:block;">Password</label>
+                    <input type="password" id="loginPassword" placeholder="******" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:8px;" required>
+                </div>
+                <div id="loginError" style="color:var(--danger); font-size:13px; text-align:center; margin-bottom:16px; display:none;"></div>
+                <button type="submit" class="primary-btn" style="width:100%; justify-content:center; padding:12px;">Login Secure</button>
+            </form>
+            <div style="margin-top:24px; font-size:13px; color:var(--text-muted); text-align:center; background:#f9f9f9; padding:12px; border-radius:8px;">
+                Akses Demo:<br>
+                Admin: <b>admin</b> / <b>admin123</b><br>
+                Gudang: <b>staf</b> / <b>staf123</b>
+            </div>
+        </div>
+    </div>
+
+    <div class="app-container" id="main-app" style="display: none;">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo-icon"><i class="fa-solid fa-box-open"></i></div>
+                <h2>Inventaris.io</h2>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="nav-item active" data-target="view-dashboard"><a href="#"><i class="fa-solid fa-house"></i> Dashboard</a></li>
+                    <li class="nav-item" data-target="view-daftar-aset"><a href="#"><i class="fa-solid fa-boxes-stacked"></i> Daftar Aset</a></li>
+                    <li class="nav-item" data-target="view-scan-qr"><a href="#"><i class="fa-solid fa-qrcode"></i> Scan QR Code</a></li>
+                    <li class="nav-item" data-target="view-peminjaman"><a href="#"><i class="fa-solid fa-people-carry-box"></i> Peminjaman</a></li>
+                    <li class="nav-item" data-target="view-maintenance"><a href="#"><i class="fa-solid fa-wrench"></i> Maintenance</a></li>
+                    <li class="nav-item" data-target="view-laporan"><a href="#"><i class="fa-solid fa-chart-pie"></i> Laporan</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer" id="nav-pengaturan">
+                <a href="#" class="nav-item" data-target="view-pengaturan"><i class="fa-solid fa-gear"></i> Pengaturan</a>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Topbar / Search -->
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Cari nama aset, ID, atau lokasi...">
+                </div>
+                <div class="topbar-actions">
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="badge">3</span></button>
+                    <div class="user-profile">
+                        <img src="" id="userAvatar" alt="Profile">
+                        <div style="display:flex; flex-direction:column;">
+                            <span id="userNameDisplay" style="font-size:14px;">User</span>
+                            <span id="userRoleDisplay" style="font-size:11px; color:var(--text-muted);">Role</span>
+                        </div>
+                    </div>
+                    <button class="secondary-btn" onclick="logout()" style="padding:6px 12px; font-size:12px; color:var(--danger); border-color:var(--danger);"><i class="fa-solid fa-right-from-bracket"></i> Keluar</button>
+                </div>
+            </header>
+
+            <!-- Viewport (Content Area) -->
+            <div class="viewport">
+                <!-- VIEW 1: Dashboard -->
+                <div id="view-dashboard" class="app-view active">
+                    <div class="page-header">
+                        <div>
+                            <h1>Overview Aset</h1>
+                            <p>Ringkasan status inventaris kantor hari ini.</p>
+                        </div>
+                        <button class="primary-btn btn-tambah-aset"><i class="fa-solid fa-plus"></i> Tambah Aset Baru</button>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon blue"><i class="fa-solid fa-boxes-stacked"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Aset</h3>
+                                <h2 id="count-total">0</h2>
+                                <p><span class="trend up"><i class="fa-solid fa-arrow-up"></i> Real-time</span> Terhubung DB</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+                            <div class="stat-info">
+                                <h3>Tersedia / Siap Pakai</h3>
+                                <h2 id="count-tersedia">0</h2>
+                                <p>Tersimpan di gudang</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon yellow"><i class="fa-solid fa-people-carry-box"></i></div>
+                            <div class="stat-info">
+                                <h3>Sedang Dipinjam</h3>
+                                <h2 id="count-dipinjam">0</h2>
+                                <p>Digunakan oleh staf</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="stat-info">
+                                <h3>Rusak / Perlu Servis</h3>
+                                <h2 id="count-rusak">0</h2>
+                                <p>Tindakan perbaikan diperlukan</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container fade-in">
+                        <div class="table-header">
+                            <h3>Aset Terbaru (Live)</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="assetTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID Aset</th>
+                                        <th>Nama Barang</th>
+                                        <th>Kategori</th>
+                                        <th>Kondisi</th>
+                                        <th>Status</th>
+                                        <th>Lokasi Saat Ini</th>
+                                        <th>Peminjam/PIC</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="dashboard-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: Daftar Aset -->
+                <div id="view-daftar-aset" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Daftar Aset Lengkap</h1>
+                            <p>Manajemen dan pencarian seluruh aset perusahaan.</p>
+                        </div>
+                        <button class="primary-btn btn-tambah-aset"><i class="fa-solid fa-plus"></i> Tambah Aset Baru</button>
+                    </div>
+                    <div class="table-container fade-in">
+                        <div class="table-header">
+                            <h3>Semua Data</h3>
+                            <div class="table-actions">
+                                <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="assetTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID Aset</th>
+                                        <th>Nama Barang</th>
+                                        <th>Kategori</th>
+                                        <th>Kondisi</th>
+                                        <th>Status</th>
+                                        <th>Lokasi Saat Ini</th>
+                                        <th>Peminjam/PIC</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="daftar-aset-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 3: Scan QR Code -->
+                <div id="view-scan-qr" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Scan QR Code</h1>
+                            <p>Arahkan kamera ke label QR aset atau masukkan ID manual.</p>
+                        </div>
+                    </div>
+                    <div class="fade-in" style="display: flex; flex-direction: column; align-items: center; margin-top: 20px;">
+                        <!-- Scanner Div (Diisi otomatis oleh JS library html5-qrcode) -->
+                        <div id="qr-reader" style="width:100%; max-width: 500px; background: white; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg);"></div>
+                        
+                        <div style="margin-top: 24px; text-align: center; background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
+                            <p style="margin-bottom: 12px; font-weight: 500;">Pencarian Manual (Jika kamera tidak tersedia):</p>
+                            <div style="display:flex; justify-content:center; gap:8px;">
+                                <input type="text" id="manualQrInput" placeholder="Misal: INV-ELK-001" style="width:250px;">
+                                <button class="primary-btn" onclick="simulateQrScan()">Cari Aset</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 4: Peminjaman -->
+                <div id="view-peminjaman" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Sistem Peminjaman (Check-in/out)</h1>
+                            <p>Catatan serah terima dan approval barang.</p>
+                        </div>
+                        <button class="primary-btn btn-buat-peminjaman"><i class="fa-solid fa-handshake"></i> Buat Permintaan</button>
+                    </div>
+                    <div class="table-container fade-in">
+                        <div class="table-header">
+                            <h3>Daftar Permintaan Aktif</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="assetTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID Request</th>
+                                        <th>Nama Peminjam</th>
+                                        <th>ID Barang</th>
+                                        <th>Tanggal Pengajuan</th>
+                                        <th>Status Approval</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="peminjaman-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 5: Maintenance -->
+                <div id="view-maintenance" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Jadwal & Tiket Maintenance</h1>
+                            <p>Daftar aset yang memerlukan servis berkala atau perbaikan.</p>
+                        </div>
+                        <button class="primary-btn btn-buat-tiket"><i class="fa-solid fa-ticket"></i> Buat Tiket Servis</button>
+                    </div>
+                    <div class="table-container fade-in">
+                        <div class="table-header">
+                            <h3>Daftar Tiket Terbuka</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="assetTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID Tiket</th>
+                                        <th>ID Aset</th>
+                                        <th>Deskripsi Kendala</th>
+                                        <th>Prioritas</th>
+                                        <th>Status Laporan</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="maintenance-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 6: Laporan -->
+                <div id="view-laporan" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Laporan & Analitik Interaktif</h1>
+                            <p>Visualisasi data aset *Real-time*.</p>
+                        </div>
+                        <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-file-csv"></i> Download Data Master</button>
+                    </div>
+                    <div class="settings-grid fade-in">
+                        <div class="setting-card" style="text-align: center;">
+                            <h3 style="margin-bottom: 20px;">Distribusi Status Aset</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="setting-card" style="text-align: center;">
+                            <h3 style="margin-bottom: 20px;">Proporsi Berdasarkan Kategori</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 7: Pengaturan -->
+                <div id="view-pengaturan" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Pengaturan Sistem (Admin)</h1>
+                            <p>Konfigurasi aplikasi, master data, dan manajemen pengguna.</p>
+                        </div>
+                    </div>
+                    <div class="settings-grid fade-in">
+                        <div class="setting-card">
+                            <i class="fa-solid fa-users" style="font-size: 24px; color: var(--primary); margin-bottom: 16px;"></i>
+                            <h3>Manajemen Pengguna</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Atur siapa saja yang memiliki akses ke sistem dan tentukan level wewenangnya (Admin/Gudang).</p>
+                            <button class="secondary-btn" onclick="openUsersModal()">Kelola Akses</button>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <i class="fa-solid fa-bell" style="font-size: 24px; color: var(--warning); margin-bottom: 16px;"></i>
+                            <h3>Notifikasi Sistem</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Pengaturan notifikasi pesan otomatis saat ada pengajuan tiket servis atau peminjaman.</p>
+                            <label class="switch-container">
+                                <input type="checkbox" checked onchange="alert(this.checked ? 'Notifikasi Diaktifkan' : 'Notifikasi Dimatikan')">
+                                <span class="slider"></span>
+                                <span class="switch-label">Notif via WhatsApp/Email</span>
+                            </label>
+                        </div>
+
+                        <div class="setting-card">
+                            <i class="fa-solid fa-tags" style="font-size: 24px; color: var(--success); margin-bottom: 16px;"></i>
+                            <h3>Master Data Dropdown</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Tambahkan Kategori Aset baru, Label Lokasi, atau Departemen agar muncul di pilihan formulir.</p>
+                            <button class="secondary-btn" onclick="openCategoriesModal()">Edit Master Data</button>
+                        </div>
+
+                        <div class="setting-card">
+                            <i class="fa-solid fa-database" style="font-size: 24px; color: var(--danger); margin-bottom: 16px;"></i>
+                            <h3>Backup Database</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Unduh salinan keamanan seluruh data aplikasi secara manual (*.sql atau *.csv) untuk arsip.</p>
+                            <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Download Semua Tabel (CSV)</button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- SEMUA MODAL FORMULIR DI BAWAH INI -->
+
+    <!-- Modal 1: Tambah Aset -->
+    <div id="addAssetModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tambah Aset Baru</h2>
+                <button class="close-btn closeModalBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="addAssetForm">
+                    <div class="form-group">
+                        <label>Nama Barang</label>
+                        <input type="text" id="assetName" placeholder="Contoh: Laptop Dell XPS 13" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select id="assetCategory" required>
+                                <option value="" disabled selected>Pilih Kategori</option>
+                                <!-- Akan diisi JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Kondisi Fisik</label>
+                            <select id="assetCondition" required>
+                                <option value="Bagus">Bagus</option>
+                                <option value="Rusak">Rusak</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status Pemakaian</label>
+                            <select id="assetStatus" required>
+                                <option value="Tersedia">Tersedia</option>
+                                <option value="Dipinjam">Dipinjam</option>
+                                <option value="Sedang Digunakan">Sedang Digunakan</option>
+                                <option value="Servis">Servis</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lokasi Saat Ini</label>
+                            <input type="text" id="assetLocation" placeholder="Contoh: Gudang Utama" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Penanggung Jawab / Peminjam</label>
+                        <input type="text" id="assetOwner" placeholder="Contoh: Budi (Kosongkan jika tidak ada)">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeModalBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Simpan Aset</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Edit Aset -->
+    <div id="editAssetModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Ubah Data Aset</h2>
+                <button class="close-btn closeEditBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="editAssetForm">
+                    <input type="hidden" id="editAssetId">
+                    <div class="form-group">
+                        <label>Nama Barang</label>
+                        <input type="text" id="editAssetName" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select id="editAssetCategory" required>
+                                <!-- Akan diisi JS -->
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Kondisi Fisik</label>
+                            <select id="editAssetCondition" required>
+                                <option value="Bagus">Bagus</option>
+                                <option value="Rusak">Rusak</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status Pemakaian</label>
+                            <select id="editAssetStatus" required>
+                                <option value="Tersedia">Tersedia</option>
+                                <option value="Dipinjam">Dipinjam</option>
+                                <option value="Sedang Digunakan">Sedang Digunakan</option>
+                                <option value="Servis">Servis</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lokasi Saat Ini</label>
+                            <input type="text" id="editAssetLocation" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Penanggung Jawab / Peminjam</label>
+                        <input type="text" id="editAssetOwner">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeEditBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Simpan Perubahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: View Detail Aset dengan QR -->
+    <div id="viewAssetModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="viewAssetTitle">Detail Aset</h2>
+                <button class="close-btn closeViewBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div id="viewAssetContent" style="font-size: 15px; line-height: 1.8;">
+                    <!-- JS Injects data here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 4: Buat Permintaan Peminjaman -->
+    <div id="borrowModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Formulir Peminjaman Aset</h2>
+                <button class="close-btn closeBorrowBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="borrowForm">
+                    <div class="form-group">
+                        <label>Nama Peminjam</label>
+                        <input type="text" id="borrowerName" placeholder="Contoh: Rina (Marketing)" required>
+                    </div>
+                    <div class="form-group">
+                        <label>ID Aset yang dipinjam</label>
+                        <input type="text" id="borrowItem" placeholder="Contoh: INV-ELK-001" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alasan Peminjaman</label>
+                        <input type="text" id="borrowReason" placeholder="Contoh: Untuk presentasi klien eksternal" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeBorrowBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Kirim Permintaan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 5: Buat Tiket Servis -->
+    <div id="maintenanceModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Laporan Kerusakan (Tiket Servis)</h2>
+                <button class="close-btn closeMaintBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="maintenanceForm">
+                    <div class="form-group">
+                        <label>ID Aset Bermasalah</label>
+                        <input type="text" id="maintItem" placeholder="Contoh: INV-ELK-112" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Deskripsi Kendala</label>
+                        <input type="text" id="maintDesc" placeholder="Contoh: AC Meneteskan air dan kurang dingin" required>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Prioritas Penanganan</label>
+                            <select id="maintPriority" required>
+                                <option value="Rendah">Rendah</option>
+                                <option value="Sedang" selected>Sedang</option>
+                                <option value="Tinggi (Mendesak)">Tinggi (Mendesak)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeMaintBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Submit Tiket</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 6: Kelola Users -->
+    <div id="usersModal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>Kelola Akses Pengguna</h2>
+                <button class="close-btn closeUsersBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="addUserForm" style="display:flex; gap:8px; margin-bottom:20px;">
+                    <input type="text" id="newUserName" placeholder="Nama" required style="flex:1;">
+                    <input type="text" id="newUserUsername" placeholder="Username" required style="flex:1;">
+                    <input type="password" id="newUserPassword" placeholder="Password" required style="flex:1;">
+                    <select id="newUserRole" required style="flex:1;">
+                        <option value="Staff">Staf Gudang</option>
+                        <option value="Admin">Admin</option>
+                    </select>
+                    <button type="submit" class="primary-btn"><i class="fa-solid fa-plus"></i></button>
+                </form>
+                <div class="table-responsive">
+                    <table class="assetTable">
+                        <thead><tr><th>Nama</th><th>Username</th><th>Role</th><th>Aksi</th></tr></thead>
+                        <tbody id="users-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 7: Kelola Master Kategori -->
+    <div id="categoriesModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Kelola Master Kategori</h2>
+                <button class="close-btn closeCatBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="addCatForm" style="display:flex; gap:8px; margin-bottom:20px;">
+                    <input type="text" id="newCatName" placeholder="Contoh: Mesin Pabrik" required style="flex:1;">
+                    <button type="submit" class="primary-btn">Tambah</button>
+                </form>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="assetTable">
+                        <thead><tr><th>Nama Kategori</th><th style="width:50px;">Aksi</th></tr></thead>
+                        <tbody id="categories-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
