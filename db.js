@@ -22,6 +22,7 @@ const replacePlaceholders = (query) => {
 const db = {
   all: (query, params, callback) => {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!Array.isArray(params)) params = [params];
     if (!connString) return callback(new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!"));
     pool.query(replacePlaceholders(query), params, (err, res) => {
       if (err) return callback(err);
@@ -30,6 +31,7 @@ const db = {
   },
   get: (query, params, callback) => {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!Array.isArray(params)) params = [params];
     if (!connString) return callback(new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!"));
     pool.query(replacePlaceholders(query), params, (err, res) => {
       if (err) return callback(err);
@@ -38,6 +40,7 @@ const db = {
   },
   run: function(query, params, callback) {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!Array.isArray(params)) params = [params];
     if (!connString) {
         const err = new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!");
         if(callback) return callback.call(this, err);
