@@ -200,6 +200,23 @@ app.get('/api/init', (req, res) => {
     }
 });
 
+// --- SEEDER MANUAL ---
+app.get('/api/seed', (req, res) => {
+    try {
+        db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["admin", "admin123", "Admin", "Admin Ops"]);
+        db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["staf", "staf123", "Staff", "Staf Gudang"]);
+        db.run("INSERT INTO categories (name) VALUES (?)", ["Elektronik"]);
+        db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
+        db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
+        db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
+        db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo", "Elektronik", "Bagus", "Tersedia", "Gudang", "-"]);
+        
+        res.json({ message: "🎉 SUKSES! Akun Admin dan data awal berhasil dibuat! Silakan kembali ke halaman awal dan lakukan Login." });
+    } catch (e) {
+        res.json({ error: e.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server Inventarisasi berjalan di: http://localhost:${PORT}`);
 });
