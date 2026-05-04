@@ -1,9 +1,14 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Koneksi ke PostgreSQL Vercel (Local: baca dari .env | Vercel: otomatis baca env server)
+// Cerdas mencari koneksi apapun yang disediakan oleh Vercel (Neon/Supabase/dll)
+const connString = process.env.POSTGRES_URL || 
+                   process.env.DATABASE_URL || 
+                   process.env.NEON_DATABASE_URL || 
+                   Object.values(process.env).find(val => typeof val === 'string' && val.startsWith('postgres://'));
+
 const pool = new Pool({
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL,
+  connectionString: connString,
   ssl: { rejectUnauthorized: false }
 });
 
@@ -17,6 +22,7 @@ const replacePlaceholders = (query) => {
 const db = {
   all: (query, params, callback) => {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!connString) return callback(new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!"));
     pool.query(replacePlaceholders(query), params, (err, res) => {
       if (err) return callback(err);
       callback(null, res.rows);
@@ -24,6 +30,7 @@ const db = {
   },
   get: (query, params, callback) => {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!connString) return callback(new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!"));
     pool.query(replacePlaceholders(query), params, (err, res) => {
       if (err) return callback(err);
       callback(null, res.rows[0]);
@@ -31,6 +38,11 @@ const db = {
   },
   run: function(query, params, callback) {
     if (typeof params === 'function') { callback = params; params = []; }
+    if (!connString) {
+        const err = new Error("Variabel Database (POSTGRES_URL) tidak ditemukan di Vercel/Local!");
+        if(callback) return callback.call(this, err);
+        return;
+    }
     
     // Penyesuaian sintaks pembuatan tabel SQLite ke Postgres
     query = query.replace(/AUTOINCREMENT/g, "SERIAL");
