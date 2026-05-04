@@ -1,103 +1,137 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { Pool } = require('pg');
+require('dotenv').config();
 
-const dbPath = path.resolve(__dirname, 'database.sqlite');
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) console.error('❌ Gagal terhubung ke database:', err.message);
-    else console.log('✅ Terhubung ke database SQLite.');
+// Koneksi ke PostgreSQL Vercel (Local: baca dari .env | Vercel: otomatis baca env server)
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_URL,
+  ssl: { rejectUnauthorized: false }
 });
 
-db.serialize(() => {
-    // 1. Assets Table
-    db.run(`CREATE TABLE IF NOT EXISTS assets (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        category TEXT,
-        condition TEXT,
-        status TEXT,
-        location TEXT,
-        owner TEXT
-    )`);
+// Helper pintar untuk menerjemahkan sintaks parameter SQLite (?) ke PostgreSQL ($1, $2)
+const replacePlaceholders = (query) => {
+    let index = 1;
+    return query.replace(/\?/g, () => `$${index++}`);
+};
 
-    // 2. Borrows (Peminjaman) Table
-    db.run(`CREATE TABLE IF NOT EXISTS borrows (
-        id TEXT PRIMARY KEY,
-        asset_id TEXT NOT NULL,
-        borrower_name TEXT NOT NULL,
-        reason TEXT,
-        request_date TEXT,
-        status TEXT
-    )`);
+// "Adapter" agar seluruh API server.js tidak perlu diedit sama sekali!
+const db = {
+  all: (query, params, callback) => {
+    if (typeof params === 'function') { callback = params; params = []; }
+    pool.query(replacePlaceholders(query), params, (err, res) => {
+      if (err) return callback(err);
+      callback(null, res.rows);
+    });
+  },
+  get: (query, params, callback) => {
+    if (typeof params === 'function') { callback = params; params = []; }
+    pool.query(replacePlaceholders(query), params, (err, res) => {
+      if (err) return callback(err);
+      callback(null, res.rows[0]);
+    });
+  },
+  run: function(query, params, callback) {
+    if (typeof params === 'function') { callback = params; params = []; }
+    
+    // Penyesuaian sintaks pembuatan tabel SQLite ke Postgres
+    query = query.replace(/AUTOINCREMENT/g, "SERIAL");
+    query = query.replace(/TEXT UNIQUE/g, "VARCHAR(255) UNIQUE");
+    
+    let isInsertUser = query.toUpperCase().includes("INSERT INTO USERS");
+    let isInsertCat = query.toUpperCase().includes("INSERT INTO CATEGORIES");
+    
+    let pgQuery = replacePlaceholders(query);
+    if (isInsertUser || isInsertCat) {
+        pgQuery += " RETURNING id"; // Agar mendapat lastID (perilaku bawaan SQLite)
+    }
 
-    // 3. Maintenance (Tiket Servis) Table
-    db.run(`CREATE TABLE IF NOT EXISTS tickets (
-        id TEXT PRIMARY KEY,
-        asset_id TEXT NOT NULL,
-        issue_desc TEXT,
-        priority TEXT,
-        status TEXT
-    )`);
+    pool.query(pgQuery, params, (err, res) => {
+      if (err) {
+        if(callback) callback.call(this, err);
+        return;
+      }
+      let lastID = null;
+      if ((isInsertUser || isInsertCat) && res.rows && res.rows.length > 0) {
+          lastID = res.rows[0].id;
+      }
+      if(callback) callback.call({ lastID: lastID }, null);
+    });
+  }
+};
 
-    // 4. Users Table
-    db.run(`CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL,
-        role TEXT NOT NULL,
-        name TEXT NOT NULL
-    )`);
+// --- Inisialisasi Tabel ---
+db.run(`CREATE TABLE IF NOT EXISTS assets (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100),
+    condition VARCHAR(50),
+    status VARCHAR(50),
+    location VARCHAR(100),
+    owner VARCHAR(100)
+)`);
 
-    // Seeder
+db.run(`CREATE TABLE IF NOT EXISTS borrows (
+    id VARCHAR(50) PRIMARY KEY,
+    asset_id VARCHAR(50) NOT NULL,
+    borrower VARCHAR(100),
+    purpose TEXT,
+    date_req VARCHAR(50),
+    status VARCHAR(50)
+)`);
+
+db.run(`CREATE TABLE IF NOT EXISTS tickets (
+    id VARCHAR(50) PRIMARY KEY,
+    asset_id VARCHAR(50) NOT NULL,
+    issue_desc TEXT,
+    priority VARCHAR(50),
+    status VARCHAR(50)
+)`);
+
+db.run(`CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(100) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL
+)`);
+
+db.run(`CREATE TABLE IF NOT EXISTS categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+)`);
+
+// --- Seeder ---
+setTimeout(() => {
     db.get("SELECT COUNT(*) AS count FROM users", (err, row) => {
-        if (row && row.count === 0) {
-            console.log("Menyuntikkan data akun user...");
-            const stmt = db.prepare("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)");
-            stmt.run("admin", "admin123", "Admin", "Admin Ops");
-            stmt.run("staf", "staf123", "Staff", "Staf Gudang");
-            stmt.finalize();
+        if (row && parseInt(row.count) === 0) {
+            console.log("Seeding Users...");
+            db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["admin", "admin123", "Admin", "Admin Ops"]);
+            db.run("INSERT INTO users (username, password, role, name) VALUES (?, ?, ?, ?)", ["staf", "staf123", "Staff", "Staf Gudang"]);
         }
     });
 
-    // Seeder Assets
-    db.get("SELECT COUNT(*) AS count FROM assets", (err, row) => {
-        if (row.count === 0) {
-            console.log("Menyuntikkan data seeder...");
-            
-            const stmtAsset = db.prepare("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)");
-            stmtAsset.run("INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso");
-            stmtAsset.run("INV-ELK-002", "MacBook Pro M2 2023", "Elektronik", "Bagus", "Tersedia", "Gudang IT", "-");
-            stmtAsset.run("INV-ALA-001", "Printer Epson L3110", "Alat Tulis Kantor", "Rusak", "Servis", "Ruang Staff", "Fasilitas Umum");
-            stmtAsset.finalize();
-
-            const stmtBorrow = db.prepare("INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)");
-            stmtBorrow.run("REQ-001", "INV-ELK-001", "Budi Santoso", "Untuk presentasi di luar kota", new Date().toLocaleDateString('id-ID'), "Approved");
-            stmtBorrow.run("REQ-002", "INV-ELK-002", "Sarah Marketing", "Laptop utama rusak", new Date().toLocaleDateString('id-ID'), "Menunggu Approval");
-            stmtBorrow.finalize();
-
-            const stmtTicket = db.prepare("INSERT INTO tickets VALUES (?, ?, ?, ?, ?)");
-            stmtTicket.run("TCK-001", "INV-ALA-001", "Tinta macet dan hasil print bergaris", "Sedang", "Open");
-            stmtTicket.finalize();
-        }
-    });
-
-    // 5. Categories Table
-    db.run(`CREATE TABLE IF NOT EXISTS categories (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT UNIQUE NOT NULL
-    )`);
-
-    // Seeder Categories
     db.get("SELECT COUNT(*) AS count FROM categories", (err, row) => {
-        if (row && row.count === 0) {
-            console.log("Menyuntikkan data master kategori...");
-            const stmt = db.prepare("INSERT INTO categories (name) VALUES (?)");
-            stmt.run("Elektronik");
-            stmt.run("Furniture");
-            stmt.run("Kendaraan");
-            stmt.run("Alat Tulis Kantor");
-            stmt.finalize();
+        if (row && parseInt(row.count) === 0) {
+            console.log("Seeding Categories...");
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Elektronik"]);
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
         }
     });
-});
+
+    db.get("SELECT COUNT(*) AS count FROM assets", (err, row) => {
+        if (row && parseInt(row.count) === 0) {
+            console.log("Seeding Assets...");
+            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso"]);
+            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-002", "MacBook Pro M2 2023", "Elektronik", "Bagus", "Tersedia", "Gudang IT", "-"]);
+            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ALA-001", "Printer Epson L3110", "Alat Tulis Kantor", "Rusak", "Servis", "Ruang Staff", "Fasilitas Umum"]);
+            
+            db.run("INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)", ["REQ-001", "INV-ELK-001", "Budi Santoso", "Untuk presentasi di luar kota", new Date().toLocaleDateString('id-ID'), "Approved"]);
+            db.run("INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)", ["REQ-002", "INV-ELK-002", "Sarah Marketing", "Laptop utama rusak", new Date().toLocaleDateString('id-ID'), "Menunggu Approval"]);
+            
+            db.run("INSERT INTO tickets VALUES (?, ?, ?, ?, ?)", ["TCK-001", "INV-ALA-001", "Tinta macet dan hasil print bergaris", "Sedang", "Open"]);
+        }
+    });
+}, 1000);
 
 module.exports = db;
