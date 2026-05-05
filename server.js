@@ -128,6 +128,13 @@ app.post('/api/tickets', (req, res) => {
     });
 });
 
+app.delete('/api/tickets/:id', (req, res) => {
+    db.run(`DELETE FROM tickets WHERE id=?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Tiket dihapus!" });
+    });
+});
+
 app.put('/api/tickets/:id/resolve', async (req, res) => {
     const runAsync = (query, params = []) => new Promise((resolve, reject) => {
         db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });

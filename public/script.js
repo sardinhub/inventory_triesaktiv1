@@ -119,7 +119,8 @@ function renderTickets() {
             <td>${getStatusBadge(t.priority)}</td>
             <td>${getStatusBadge(t.status)}</td>
             <td>
-                ${t.status === 'Open' ? `<button class="secondary-btn" onclick="resolveTicket('${t.id}')" style="padding: 4px 12px; font-size:12px;"><i class="fa-solid fa-check"></i> Selesai</button>` : `<span style="font-size:12px; color:var(--text-muted);">Tuntas</span>`}
+                ${t.status === 'Open' ? `<button class="secondary-btn" onclick="resolveTicket('${t.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Selesai</button>` : ''}
+                <button class="action-btn" onclick="deleteTicket('${t.id}')" style="color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -260,6 +261,22 @@ window.deleteBorrow = async function(id) {
 window.resolveTicket = async function(id) {
     await fetch(`/api/tickets/${id}/resolve`, { method: 'PUT' });
     fetchData(); 
+};
+
+window.deleteTicket = async function(id) {
+    const res = await Swal.fire({
+        title: 'Hapus Tiket?',
+        text: `Hapus riwayat servis ${id}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Ya, Hapus'
+    });
+    if(res.isConfirmed) {
+        await fetch(`/api/tickets/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Tiket servis telah dihapus.', 'success');
+        fetchData();
+    }
 };
 
 // --- MASTER DATA & USERS MANAGEMENT ---
