@@ -144,11 +144,13 @@
                                     <tr>
                                         <th>ID Aset</th>
                                         <th>Nama Barang</th>
+                                        <th>Merk & Type</th>
                                         <th>Kategori</th>
                                         <th>Kondisi</th>
                                         <th>Status</th>
                                         <th>Lokasi Saat Ini</th>
                                         <th>Peminjam/PIC</th>
+                                        <th>Riwayat Terakhir</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
@@ -180,11 +182,13 @@
                                     <tr>
                                         <th>ID Aset</th>
                                         <th>Nama Barang</th>
+                                        <th>Merk & Type</th>
                                         <th>Kategori</th>
                                         <th>Kondisi</th>
                                         <th>Status</th>
                                         <th>Lokasi Saat Ini</th>
                                         <th>Peminjam/PIC</th>
+                                        <th>Riwayat Terakhir</th>
                                         <th>Aksi</th>
                                     </tr>
                                 </thead>
@@ -361,9 +365,15 @@
             </div>
             <div class="modal-body">
                 <form id="addAssetForm">
-                    <div class="form-group">
-                        <label>Nama Barang</label>
-                        <input type="text" id="assetName" placeholder="Contoh: Laptop Dell XPS 13" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Barang</label>
+                            <input type="text" id="assetName" placeholder="Contoh: Laptop Kerja" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Merk & Type</label>
+                            <input type="text" id="assetBrand" placeholder="Contoh: Dell XPS 13" required>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -396,9 +406,15 @@
                             <input type="text" id="assetLocation" placeholder="Contoh: Gudang Utama" required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Penanggung Jawab / Peminjam</label>
-                        <input type="text" id="assetOwner" placeholder="Contoh: Budi (Kosongkan jika tidak ada)">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Penanggung Jawab / Peminjam</label>
+                            <input type="text" id="assetOwner" placeholder="Contoh: Budi (Kosongkan jika tidak ada)">
+                        </div>
+                        <div class="form-group">
+                            <label>Riwayat Terakhir (Tanggal)</label>
+                            <input type="date" id="assetLastUpdated" required>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="secondary-btn closeModalBtn">Batal</button>
@@ -419,9 +435,15 @@
             <div class="modal-body">
                 <form id="editAssetForm">
                     <input type="hidden" id="editAssetId">
-                    <div class="form-group">
-                        <label>Nama Barang</label>
-                        <input type="text" id="editAssetName" required>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Barang</label>
+                            <input type="text" id="editAssetName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Merk & Type</label>
+                            <input type="text" id="editAssetBrand" required>
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -453,9 +475,15 @@
                             <input type="text" id="editAssetLocation" required>
                         </div>
                     </div>
-                    <div class="form-group">
-                        <label>Penanggung Jawab / Peminjam</label>
-                        <input type="text" id="editAssetOwner">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Penanggung Jawab / Peminjam</label>
+                            <input type="text" id="editAssetOwner">
+                        </div>
+                        <div class="form-group">
+                            <label>Riwayat Terakhir (Tanggal)</label>
+                            <input type="date" id="editAssetLastUpdated" required>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="secondary-btn closeEditBtn">Batal</button>

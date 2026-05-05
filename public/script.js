@@ -63,11 +63,13 @@ function renderAssets() {
         <tr>
             <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
             <td class="asset-name">${a.name}</td>
+            <td>${a.brand || '-'}</td>
             <td>${a.category}</td>
             <td>${getConditionBadge(a.condition)}</td>
             <td>${getStatusBadge(a.status)}</td>
             <td><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
             <td style="font-weight: 500;">${a.owner}</td>
+            <td>${a.last_updated || '-'}</td>
             <td>
                 <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
                 ${currentUser && currentUser.role === 'Admin' ? `
@@ -122,11 +124,13 @@ window.viewAsset = function(id) {
     document.getElementById('viewAssetTitle').innerText = "Detail: " + a.name;
     document.getElementById('viewAssetContent').innerHTML = `
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>ID Aset:</strong> <span style="float:right; color:var(--primary); font-family:monospace; font-weight:bold;">${a.id}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Merk & Type:</strong> <span style="float:right;">${a.brand || '-'}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kategori:</strong> <span style="float:right;">${a.category}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kondisi:</strong> <span style="float:right;">${getConditionBadge(a.condition)}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Status:</strong> <span style="float:right;">${getStatusBadge(a.status)}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Lokasi:</strong> <span style="float:right;">${a.location}</span></div>
-        <div style="margin-bottom: 8px;"><strong>PIC:</strong> <span style="float:right; font-weight:500;">${a.owner}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>PIC:</strong> <span style="float:right; font-weight:500;">${a.owner}</span></div>
+        <div style="margin-bottom: 8px;"><strong>Riwayat Terakhir:</strong> <span style="float:right;">${a.last_updated || '-'}</span></div>
         <div style="margin-top:20px; text-align:center;">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${a.id}" alt="QR Code" style="border-radius:12px; padding:8px; border:1px solid var(--border); background:white;">
             <p style="font-size:12px; margin-top:8px; color:var(--text-muted);">Scan QR Code ini untuk akses cepat via mobile</p>
@@ -175,8 +179,9 @@ window.printLabel = function(id) {
                     <div class="asset-name">${a.name}</div>
                     <div class="asset-id">${a.id}</div>
                     <div class="asset-meta">
-                        ${a.category}<br>
-                        Lokasi: ${a.location}
+                        ${a.brand || '-'}<br>
+                        ${a.category} • ${a.location}<br>
+                        Update: ${a.last_updated || '-'}
                     </div>
                 </div>
                 <script>
@@ -196,11 +201,13 @@ window.openEditAsset = function(id) {
     if(!a) return;
     document.getElementById('editAssetId').value = a.id;
     document.getElementById('editAssetName').value = a.name;
+    document.getElementById('editAssetBrand').value = a.brand || '';
     document.getElementById('editAssetCategory').value = a.category;
     document.getElementById('editAssetCondition').value = a.condition;
     document.getElementById('editAssetStatus').value = a.status;
     document.getElementById('editAssetLocation').value = a.location;
     document.getElementById('editAssetOwner').value = a.owner;
+    document.getElementById('editAssetLastUpdated').value = a.last_updated || new Date().toISOString().split('T')[0];
     document.getElementById('editAssetModal').classList.add('active');
 };
 
@@ -395,9 +402,9 @@ function renderCharts() {
 // --- EXPORT TO CSV ---
 window.exportToCSV = function() {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "ID Aset,Nama Barang,Kategori,Kondisi,Status,Lokasi,Peminjam\n";
+    csvContent += "ID Aset,Nama Barang,Merk & Type,Kategori,Kondisi,Status,Lokasi,Peminjam,Riwayat Terakhir\n";
     assets.forEach(a => {
-        csvContent += `"${a.id}","${a.name}","${a.category}","${a.condition}","${a.status}","${a.location}","${a.owner}"\n`;
+        csvContent += `"${a.id}","${a.name}","${a.brand || '-'}","${a.category}","${a.condition}","${a.status}","${a.location}","${a.owner}","${a.last_updated || '-'}"\n`;
     });
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -522,6 +529,12 @@ document.addEventListener("DOMContentLoaded", () => {
     setupModal('.closeUsersBtn', 'usersModal', '.closeUsersBtn');
     setupModal('.closeCatBtn', 'categoriesModal', '.closeCatBtn');
 
+    document.querySelectorAll('.btn-tambah-aset').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('assetLastUpdated').value = new Date().toISOString().split('T')[0];
+        });
+    });
+
     // POST: Tambah Aset
     document.getElementById('addAssetForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -539,11 +552,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = {
             id: `INV-${document.getElementById('assetCategory').value.substring(0,3).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
             name: document.getElementById('assetName').value,
+            brand: document.getElementById('assetBrand').value,
             category: document.getElementById('assetCategory').value,
             condition: document.getElementById('assetCondition').value,
             status: document.getElementById('assetStatus').value,
             location: document.getElementById('assetLocation').value,
-            owner: document.getElementById('assetOwner').value || "-"
+            owner: document.getElementById('assetOwner').value || "-",
+            last_updated: document.getElementById('assetLastUpdated').value
         };
         await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('addAssetModal').classList.remove('active');
@@ -567,11 +582,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = document.getElementById('editAssetId').value;
         const data = {
             name: document.getElementById('editAssetName').value,
+            brand: document.getElementById('editAssetBrand').value,
             category: document.getElementById('editAssetCategory').value,
             condition: document.getElementById('editAssetCondition').value,
             status: document.getElementById('editAssetStatus').value,
             location: document.getElementById('editAssetLocation').value,
-            owner: document.getElementById('editAssetOwner').value || "-"
+            owner: document.getElementById('editAssetOwner').value || "-",
+            last_updated: document.getElementById('editAssetLastUpdated').value
         };
         await fetch(`/api/assets/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('editAssetModal').classList.remove('active');

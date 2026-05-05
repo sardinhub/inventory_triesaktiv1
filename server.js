@@ -32,17 +32,18 @@ app.get('/api/assets', (req, res) => {
 });
 
 app.post('/api/assets', (req, res) => {
-    const { id, name, category, condition, status, location, owner } = req.body;
-    db.run(`INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)`, [id, name, category, condition, status, location, owner], function(err) {
+    const { id, name, brand, category, condition, status, location, owner, last_updated } = req.body;
+    db.run(`INSERT INTO assets (id, name, brand, category, condition, status, location, owner, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+        [id, name, brand, category, condition, status, location, owner, last_updated], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Aset disimpan!", id: this.lastID });
     });
 });
 
 app.put('/api/assets/:id', (req, res) => {
-    const { name, category, condition, status, location, owner } = req.body;
-    db.run(`UPDATE assets SET name=?, category=?, condition=?, status=?, location=?, owner=? WHERE id=?`, 
-        [name, category, condition, status, location, owner, req.params.id], function(err) {
+    const { name, brand, category, condition, status, location, owner, last_updated } = req.body;
+    db.run(`UPDATE assets SET name=?, brand=?, category=?, condition=?, status=?, location=?, owner=?, last_updated=? WHERE id=?`, 
+        [name, brand, category, condition, status, location, owner, last_updated, req.params.id], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Aset diupdate!" });
     });
@@ -167,6 +168,10 @@ app.delete('/api/categories/:id', (req, res) => {
 app.get('/api/init', (req, res) => {
     try {
         db.run(`CREATE TABLE IF NOT EXISTS assets (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), condition VARCHAR(50), status VARCHAR(50), location VARCHAR(100), owner VARCHAR(100))`);
+        // Migrasi kolom baru (Aman jika kolom sudah ada)
+        db.run(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS brand VARCHAR(255)`);
+        db.run(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_updated VARCHAR(100)`);
+        
         db.run(`CREATE TABLE IF NOT EXISTS borrows (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, borrower VARCHAR(100), purpose TEXT, date_req VARCHAR(50), status VARCHAR(50))`);
         db.run(`CREATE TABLE IF NOT EXISTS tickets (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, issue_desc TEXT, priority VARCHAR(50), status VARCHAR(50))`);
         db.run(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(50) NOT NULL, name VARCHAR(100) NOT NULL)`);
@@ -189,7 +194,8 @@ app.get('/api/init', (req, res) => {
             });
             db.get("SELECT COUNT(*) AS count FROM assets", (err, row) => {
                 if (row && parseInt(row.count) === 0) {
-                    db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso"]);
+                    db.run("INSERT INTO assets (id, name, brand, category, condition, status, location, owner, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                    ["INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Lenovo", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso", new Date().toISOString().split('T')[0]]);
                 }
             });
         }, 1500);
@@ -209,7 +215,8 @@ app.get('/api/seed', (req, res) => {
         db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
         db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
         db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
-        db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo", "Elektronik", "Bagus", "Tersedia", "Gudang", "-"]);
+        db.run("INSERT INTO assets (id, name, brand, category, condition, status, location, owner, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+            ["INV-ELK-001", "Laptop Lenovo", "Lenovo", "Elektronik", "Bagus", "Tersedia", "Gudang", "-", new Date().toISOString().split('T')[0]]);
         
         res.json({ message: "🎉 SUKSES! Akun Admin dan data awal berhasil dibuat! Silakan kembali ke halaman awal dan lakukan Login." });
     } catch (e) {
