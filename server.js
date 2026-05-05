@@ -72,15 +72,24 @@ app.post('/api/borrows', (req, res) => {
     });
 });
 
-app.put('/api/borrows/:id/approve', (req, res) => {
-    db.run(`UPDATE borrows SET status='Approved' WHERE id=?`, [req.params.id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        // Update asset status
-        db.get("SELECT asset_id, borrower_name FROM borrows WHERE id=?", [req.params.id], (err, row) => {
-            if(row) db.run(`UPDATE assets SET status='Dipinjam', owner=? WHERE id=?`, [row.borrower_name, row.asset_id]);
-        });
-        res.json({ message: "Disetujui!" });
+app.put('/api/borrows/:id/approve', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
     });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+
+    try {
+        await runAsync(`UPDATE borrows SET status='Approved' WHERE id=?`, [req.params.id]);
+        const row = await getAsync("SELECT asset_id, borrower_name FROM borrows WHERE id=?", [req.params.id]);
+        if(row) {
+            await runAsync(`UPDATE assets SET status='Dipinjam', owner=? WHERE id=?`, [row.borrower_name, row.asset_id]);
+        }
+        res.json({ message: "Disetujui dan status aset diperbarui!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // --- TICKETS ---
@@ -100,14 +109,24 @@ app.post('/api/tickets', (req, res) => {
     });
 });
 
-app.put('/api/tickets/:id/resolve', (req, res) => {
-    db.run(`UPDATE tickets SET status='Resolved' WHERE id=?`, [req.params.id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        db.get("SELECT asset_id FROM tickets WHERE id=?", [req.params.id], (err, row) => {
-            if(row) db.run(`UPDATE assets SET status='Tersedia', condition='Bagus', owner='-' WHERE id=?`, [row.asset_id]);
-        });
-        res.json({ message: "Tiket diselesaikan!" });
+app.put('/api/tickets/:id/resolve', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
     });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+
+    try {
+        await runAsync(`UPDATE tickets SET status='Resolved' WHERE id=?`, [req.params.id]);
+        const row = await getAsync("SELECT asset_id FROM tickets WHERE id=?", [req.params.id]);
+        if(row) {
+            await runAsync(`UPDATE assets SET status='Tersedia', condition='Bagus', owner='-' WHERE id=?`, [row.asset_id]);
+        }
+        res.json({ message: "Tiket diselesaikan dan aset kembali tersedia!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // --- STATS FOR LAPORAN ---
