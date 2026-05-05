@@ -256,6 +256,29 @@ app.get('/api/seed', (req, res) => {
     }
 });
 
+// --- RESET DATABASE (Gunakan dengan hati-hati!) ---
+app.get('/api/database/reset', async (req, res) => {
+    const runAsync = (query, params = []) => {
+        return new Promise((resolve, reject) => {
+            db.run(query, params, function(err) {
+                if (err) reject(err);
+                else resolve(this);
+            });
+        });
+    };
+
+    try {
+        console.log("Resetting database...");
+        await runAsync("DELETE FROM borrows");
+        await runAsync("DELETE FROM tickets");
+        await runAsync("DELETE FROM assets");
+        
+        res.json({ success: true, message: "🚀 DATABASE BERHASIL DIRESET! Semua data aset, peminjaman, dan tiket telah dihapus. Database siap untuk input data baru." });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server Inventarisasi berjalan di: http://localhost:${PORT}`);
 });

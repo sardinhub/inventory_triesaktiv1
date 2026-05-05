@@ -116,6 +116,7 @@ db.run(`CREATE TABLE IF NOT EXISTS categories (
 
 // --- Seeder ---
 setTimeout(() => {
+    // Seeder Users dan Kategori tetap dipertahankan agar sistem bisa langsung digunakan
     db.get("SELECT COUNT(*) AS count FROM users", (err, row) => {
         if (row && parseInt(row.count) === 0) {
             console.log("Seeding Users...");
@@ -131,20 +132,6 @@ setTimeout(() => {
             db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
-        }
-    });
-
-    db.get("SELECT COUNT(*) AS count FROM assets", (err, row) => {
-        if (row && parseInt(row.count) === 0) {
-            console.log("Seeding Assets...");
-            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-001", "Laptop Lenovo ThinkPad T14", "Elektronik", "Bagus", "Dipinjam", "Divisi Marketing", "Budi Santoso"]);
-            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ELK-002", "MacBook Pro M2 2023", "Elektronik", "Bagus", "Tersedia", "Gudang IT", "-"]);
-            db.run("INSERT INTO assets VALUES (?, ?, ?, ?, ?, ?, ?)", ["INV-ALA-001", "Printer Epson L3110", "Alat Tulis Kantor", "Rusak", "Servis", "Ruang Staff", "Fasilitas Umum"]);
-            
-            db.run("INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)", ["REQ-001", "INV-ELK-001", "Budi Santoso", "Untuk presentasi di luar kota", new Date().toLocaleDateString('id-ID'), "Approved"]);
-            db.run("INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)", ["REQ-002", "INV-ELK-002", "Sarah Marketing", "Laptop utama rusak", new Date().toLocaleDateString('id-ID'), "Menunggu Approval"]);
-            
-            db.run("INSERT INTO tickets VALUES (?, ?, ?, ?, ?)", ["TCK-001", "INV-ALA-001", "Tinta macet dan hasil print bergaris", "Sedang", "Open"]);
         }
     });
 }, 1000);
