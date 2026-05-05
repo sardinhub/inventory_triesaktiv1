@@ -560,10 +560,22 @@ document.addEventListener("DOMContentLoaded", () => {
             owner: document.getElementById('assetOwner').value || "-",
             last_updated: document.getElementById('assetLastUpdated').value
         };
-        await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-        document.getElementById('addAssetModal').classList.remove('active');
-        Swal.fire('Tersimpan!', 'Aset baru berhasil ditambahkan.', 'success');
-        fetchData();
+        
+        try {
+            const res = await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            const result = await res.json();
+            
+            if(!res.ok) {
+                Swal.fire('Peringatan Database', result.error || 'Terjadi kesalahan jaringan.', 'error');
+                return;
+            }
+
+            document.getElementById('addAssetModal').classList.remove('active');
+            Swal.fire('Tersimpan!', 'Aset baru berhasil ditambahkan.', 'success');
+            fetchData();
+        } catch(err) {
+            Swal.fire('Error Sistem', 'Tidak dapat terhubung ke server.', 'error');
+        }
     });
 
     // PUT: Edit Aset
@@ -590,10 +602,22 @@ document.addEventListener("DOMContentLoaded", () => {
             owner: document.getElementById('editAssetOwner').value || "-",
             last_updated: document.getElementById('editAssetLastUpdated').value
         };
-        await fetch(`/api/assets/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-        document.getElementById('editAssetModal').classList.remove('active');
-        Swal.fire('Diperbarui!', 'Perubahan aset berhasil disimpan.', 'success');
-        fetchData();
+        
+        try {
+            const res = await fetch(`/api/assets/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            const result = await res.json();
+            
+            if(!res.ok) {
+                Swal.fire('Peringatan Database', result.error || 'Terjadi kesalahan sistem.', 'error');
+                return;
+            }
+
+            document.getElementById('editAssetModal').classList.remove('active');
+            Swal.fire('Diperbarui!', 'Perubahan aset berhasil disimpan.', 'success');
+            fetchData();
+        } catch(err) {
+            Swal.fire('Error Sistem', 'Tidak dapat terhubung ke server.', 'error');
+        }
     });
 
     // POST: Buat Request Peminjaman
