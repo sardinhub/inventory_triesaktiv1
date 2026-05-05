@@ -96,9 +96,9 @@ function renderBorrows() {
     tbody.innerHTML = borrows.map(b => `
         <tr>
             <td style="font-family: monospace; font-weight:bold;">${b.id}</td>
-            <td style="font-weight:500;">${b.borrower_name}</td>
+            <td style="font-weight:500;">${b.borrower}</td>
             <td>${b.asset_id} <br><small style="color:var(--text-muted)">${b.asset_name || ''}</small></td>
-            <td>${b.request_date}</td>
+            <td>${b.date_req}</td>
             <td>${getStatusBadge(b.status)}</td>
             <td>
                 ${b.status === 'Menunggu Approval' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 12px; font-size:12px;"><i class="fa-solid fa-check"></i> Approve</button>` : `<span style="font-size:12px; color:var(--text-muted);">Selesai</span>`}

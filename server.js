@@ -82,9 +82,9 @@ app.put('/api/borrows/:id/approve', async (req, res) => {
 
     try {
         await runAsync(`UPDATE borrows SET status='Approved' WHERE id=?`, [req.params.id]);
-        const row = await getAsync("SELECT asset_id, borrower_name FROM borrows WHERE id=?", [req.params.id]);
+        const row = await getAsync("SELECT asset_id, borrower FROM borrows WHERE id=?", [req.params.id]);
         if(row) {
-            await runAsync(`UPDATE assets SET status='Dipinjam', owner=? WHERE id=?`, [row.borrower_name, row.asset_id]);
+            await runAsync(`UPDATE assets SET status='Dipinjam', owner=? WHERE id=?`, [row.borrower, row.asset_id]);
         }
         res.json({ message: "Disetujui dan status aset diperbarui!" });
     } catch (err) {
