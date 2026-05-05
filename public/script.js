@@ -81,6 +81,13 @@ function renderAssets() {
     `).join('');
     if(dBody) dBody.innerHTML = rows;
     if(aBody) aBody.innerHTML = rows;
+    
+    // --- SMART DROPDOWN (DATALIST) ---
+    const datalistOptions = assets.map(a => `<option value="${a.id} - ${a.name}">`).join('');
+    const borrowList = document.getElementById('borrowAssetList');
+    if(borrowList) borrowList.innerHTML = datalistOptions;
+    const maintList = document.getElementById('maintAssetList');
+    if(maintList) maintList.innerHTML = datalistOptions;
 }
 
 function renderBorrows() {
@@ -624,12 +631,17 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const asset_id = document.getElementById('borrowItem').value.split(' - ')[0].trim();
+        if(!assets.find(a => a.id === asset_id)) {
+            return Swal.fire('Aset Tidak Valid', 'Mohon ketik lalu pilih aset dari daftar dropdown yang muncul.', 'error');
+        }
+        
         const conf = await Swal.fire({ title: 'Ajukan Peminjaman?', icon: 'question', showCancelButton: true, confirmButtonText: 'Ajukan' });
         if(!conf.isConfirmed) return;
 
         const data = {
             id: `REQ-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
-            asset_id: document.getElementById('borrowItem').value,
+            asset_id: asset_id,
             borrower_name: document.getElementById('borrowerName').value,
             reason: document.getElementById('borrowReason').value,
             request_date: new Date().toLocaleDateString('id-ID'),
@@ -644,15 +656,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // POST: Buat Tiket Maintenance
     document.getElementById('maintenanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        const asset_id = document.getElementById('maintItem').value.split(' - ')[0].trim();
+        if(!assets.find(a => a.id === asset_id)) {
+            return Swal.fire('Aset Tidak Valid', 'Mohon ketik lalu pilih aset dari daftar dropdown yang muncul.', 'error');
+        }
+
         const data = {
             id: `TCK-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
-            asset_id: document.getElementById('maintItem').value,
+            asset_id: asset_id,
             issue_desc: document.getElementById('maintDesc').value,
             priority: document.getElementById('maintPriority').value,
             status: "Open"
         };
         await fetch('/api/tickets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
         document.getElementById('maintenanceModal').classList.remove('active');
+        Swal.fire('Tiket Terbuat!', 'Laporan kerusakan telah masuk antrean.', 'success');
         fetchData();
     });
 

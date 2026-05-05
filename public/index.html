@@ -523,8 +523,9 @@
                         <input type="text" id="borrowerName" placeholder="Contoh: Rina (Marketing)" required>
                     </div>
                     <div class="form-group">
-                        <label>ID Aset yang dipinjam</label>
-                        <input type="text" id="borrowItem" placeholder="Contoh: INV-ELK-001" required>
+                        <label>Pilih Aset yang Dipinjam</label>
+                        <input type="text" id="borrowItem" list="borrowAssetList" placeholder="Ketik nama atau ID aset..." required>
+                        <datalist id="borrowAssetList"></datalist>
                     </div>
                     <div class="form-group">
                         <label>Alasan Peminjaman</label>
@@ -549,8 +550,9 @@
             <div class="modal-body">
                 <form id="maintenanceForm">
                     <div class="form-group">
-                        <label>ID Aset Bermasalah</label>
-                        <input type="text" id="maintItem" placeholder="Contoh: INV-ELK-112" required>
+                        <label>Pilih Aset Bermasalah</label>
+                        <input type="text" id="maintItem" list="maintAssetList" placeholder="Ketik nama atau ID aset..." required>
+                        <datalist id="maintAssetList"></datalist>
                     </div>
                     <div class="form-group">
                         <label>Deskripsi Kendala</label>
