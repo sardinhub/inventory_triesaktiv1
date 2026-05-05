@@ -130,9 +130,65 @@ window.viewAsset = function(id) {
         <div style="margin-top:20px; text-align:center;">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${a.id}" alt="QR Code" style="border-radius:12px; padding:8px; border:1px solid var(--border); background:white;">
             <p style="font-size:12px; margin-top:8px; color:var(--text-muted);">Scan QR Code ini untuk akses cepat via mobile</p>
+            <button class="primary-btn" onclick="printLabel('${a.id}')" style="margin-top: 16px; width: 100%; justify-content: center;"><i class="fa-solid fa-print"></i> Cetak Label Fisik</button>
         </div>
     `;
     document.getElementById('viewAssetModal').classList.add('active');
+};
+
+window.printLabel = function(id) {
+    const a = assets.find(x => x.id === id);
+    if(!a) return;
+    
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Cetak Label - ${a.id}</title>
+                <style>
+                    body { font-family: 'Arial', sans-serif; margin: 0; padding: 20px; text-align: center; background: #f0f0f0; }
+                    .label-container {
+                        background: white;
+                        border: 2px dashed #000;
+                        border-radius: 12px;
+                        padding: 20px;
+                        width: 250px;
+                        margin: 0 auto;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+                    .header { font-size: 14px; font-weight: bold; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
+                    .qr-image { width: 150px; height: 150px; margin-bottom: 12px; }
+                    .asset-name { font-size: 16px; font-weight: bold; margin-bottom: 4px; line-height: 1.2; }
+                    .asset-id { font-family: monospace; font-size: 15px; font-weight: bold; margin-bottom: 8px; }
+                    .asset-meta { font-size: 11px; color: #555; border-top: 1px solid #ddd; padding-top: 8px; margin-top: 8px; }
+                    
+                    @media print {
+                        body { padding: 0; background: white; }
+                        .label-container { border: 1px solid #000; box-shadow: none; page-break-inside: avoid; border-radius: 0; }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="label-container">
+                    <div class="header">INVENTARIS.IO</div>
+                    <img class="qr-image" src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${a.id}" alt="QR">
+                    <div class="asset-name">${a.name}</div>
+                    <div class="asset-id">${a.id}</div>
+                    <div class="asset-meta">
+                        ${a.category}<br>
+                        Lokasi: ${a.location}
+                    </div>
+                </div>
+                <script>
+                    setTimeout(() => {
+                        window.print();
+                        window.close();
+                    }, 800);
+                </script>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
 };
 
 window.openEditAsset = function(id) {
