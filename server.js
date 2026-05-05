@@ -166,17 +166,26 @@ app.delete('/api/categories/:id', (req, res) => {
 
 // --- DATABASE INITIALIZER (Untuk Vercel Serverless) ---
 app.get('/api/init', async (req, res) => {
+    const runAsync = (query, params = []) => {
+        return new Promise((resolve, reject) => {
+            db.run(query, params, function(err) {
+                if (err) reject(err);
+                else resolve(this);
+            });
+        });
+    };
+
     try {
-        await db.run(`CREATE TABLE IF NOT EXISTS assets (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), condition VARCHAR(50), status VARCHAR(50), location VARCHAR(100), owner VARCHAR(100))`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS assets (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), condition VARCHAR(50), status VARCHAR(50), location VARCHAR(100), owner VARCHAR(100))`);
         
         // Memaksa Vercel menunggu update kolom selesai sebelum menutup koneksi
-        await db.run(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS brand VARCHAR(255)`);
-        await db.run(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_updated VARCHAR(100)`);
+        await runAsync(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS brand VARCHAR(255)`);
+        await runAsync(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_updated VARCHAR(100)`);
         
-        await db.run(`CREATE TABLE IF NOT EXISTS borrows (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, borrower VARCHAR(100), purpose TEXT, date_req VARCHAR(50), status VARCHAR(50))`);
-        await db.run(`CREATE TABLE IF NOT EXISTS tickets (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, issue_desc TEXT, priority VARCHAR(50), status VARCHAR(50))`);
-        await db.run(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(50) NOT NULL, name VARCHAR(100) NOT NULL)`);
-        await db.run(`CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL)`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS borrows (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, borrower VARCHAR(100), purpose TEXT, date_req VARCHAR(50), status VARCHAR(50))`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS tickets (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, issue_desc TEXT, priority VARCHAR(50), status VARCHAR(50))`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(50) NOT NULL, name VARCHAR(100) NOT NULL)`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL)`);
 
         res.json({ success: true, message: "🎉 UPDATE BERHASIL! Database telah siap dengan struktur terbaru. Silakan kembali ke web." });
     } catch (err) {
