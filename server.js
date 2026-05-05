@@ -40,13 +40,25 @@ app.post('/api/assets', (req, res) => {
     });
 });
 
-app.put('/api/assets/:id', (req, res) => {
-    const { name, brand, category, condition, status, location, owner, last_updated } = req.body;
-    db.run(`UPDATE assets SET name=?, brand=?, category=?, condition=?, status=?, location=?, owner=?, last_updated=? WHERE id=?`, 
-        [name, brand, category, condition, status, location, owner, last_updated, req.params.id], function(err) {
-        if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: "Aset diupdate!" });
+app.put('/api/assets/:id', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
     });
+
+    const { name, brand, category, condition, status, location, owner, last_updated } = req.body;
+    try {
+        await runAsync(`UPDATE assets SET name=?, brand=?, category=?, condition=?, status=?, location=?, owner=?, last_updated=? WHERE id=?`, 
+            [name, brand, category, condition, status, location, owner, last_updated, req.params.id]);
+        
+        // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
+        if (status === 'Tersedia') {
+            await runAsync(`UPDATE borrows SET status='Closed' WHERE asset_id=? AND status='Approved'`, [req.params.id]);
+        }
+        
+        res.json({ message: "Aset diupdate dan status peminjaman disinkronkan!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.delete('/api/assets/:id', (req, res) => {

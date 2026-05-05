@@ -41,7 +41,7 @@ function updateDashboardCards() {
 // --- RENDERERS ---
 function getConditionBadge(cond) { return cond==="Bagus"?`<span class="pill pill-success">Bagus</span>`:`<span class="pill pill-danger">Rusak</span>`; }
 function getStatusBadge(stat) {
-    if(["Tersedia","Approved","Resolved"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
+    if(["Tersedia","Approved","Resolved","Closed"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
     if(["Dipinjam","Menunggu Approval","Open","Sedang"].includes(stat)) return `<span class="pill pill-warning">${stat}</span>`;
     if(["Servis","Tinggi (Mendesak)"].includes(stat)) return `<span class="pill pill-danger">${stat}</span>`;
     if(["Sedang Digunakan"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
