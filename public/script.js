@@ -101,7 +101,8 @@ function renderBorrows() {
             <td>${b.date_req}</td>
             <td>${getStatusBadge(b.status)}</td>
             <td>
-                ${b.status === 'Menunggu Approval' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 12px; font-size:12px;"><i class="fa-solid fa-check"></i> Approve</button>` : `<span style="font-size:12px; color:var(--text-muted);">Selesai</span>`}
+                ${b.status === 'Menunggu Approval' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
+                <button class="action-btn" onclick="deleteBorrow('${b.id}')" style="color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
     `).join('');
@@ -238,6 +239,22 @@ window.deleteAsset = async function(id) {
 window.approveBorrow = async function(id) {
     await fetch(`/api/borrows/${id}/approve`, { method: 'PUT' });
     fetchData(); // Refresh everything since asset status also changes
+};
+
+window.deleteBorrow = async function(id) {
+    const res = await Swal.fire({
+        title: 'Hapus Data Pinjam?',
+        text: `Hapus riwayat peminjaman ${id}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Ya, Hapus'
+    });
+    if(res.isConfirmed) {
+        await fetch(`/api/borrows/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Data peminjaman telah dibersihkan.', 'success');
+        fetchData();
+    }
 };
 
 window.resolveTicket = async function(id) {

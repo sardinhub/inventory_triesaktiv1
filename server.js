@@ -84,6 +84,13 @@ app.post('/api/borrows', (req, res) => {
     });
 });
 
+app.delete('/api/borrows/:id', (req, res) => {
+    db.run(`DELETE FROM borrows WHERE id=?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Peminjaman dihapus!" });
+    });
+});
+
 app.put('/api/borrows/:id/approve', async (req, res) => {
     const runAsync = (query, params = []) => new Promise((resolve, reject) => {
         db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
