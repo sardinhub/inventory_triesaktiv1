@@ -25,6 +25,7 @@ async function fetchData() {
         renderTickets();
         updateDashboardCards();
         renderCharts();
+        populateFilterDropdowns(); // Populate Category & Location filters
     } catch(err) { 
         console.error("Error fetching data:", err); 
         if(err.message.includes('401')) logout();
@@ -598,22 +599,65 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    // Search Functionality
+    // --- UNIFIED FILTERING SYSTEM ---
     const searchInput = document.querySelector('.search-bar input');
-    searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        if(!term) {
-            renderAssets();
-            return;
-        }
-        const filtered = assets.filter(a => 
-            a.name.toLowerCase().includes(term) || 
-            a.id.toLowerCase().includes(term) || 
-            a.category.toLowerCase().includes(term) ||
-            a.location.toLowerCase().includes(term)
-        );
+    const filterCategory = document.getElementById('filterCategory');
+    const filterCondition = document.getElementById('filterCondition');
+    const filterStatus = document.getElementById('filterStatus');
+    const filterLocation = document.getElementById('filterLocation');
+
+    function applyFilters() {
+        const term = searchInput.value.toLowerCase();
+        const cat = filterCategory.value;
+        const cond = filterCondition.value;
+        const stat = filterStatus.value;
+        const loc = filterLocation.value;
+
+        const filtered = assets.filter(a => {
+            const matchesSearch = !term || 
+                a.name.toLowerCase().includes(term) || 
+                a.id.toLowerCase().includes(term) || 
+                a.brand?.toLowerCase().includes(term);
+            
+            const matchesCat = !cat || a.category === cat;
+            const matchesCond = !cond || a.condition === cond;
+            const matchesStat = !stat || a.status === stat;
+            const matchesLoc = !loc || a.location === loc;
+
+            return matchesSearch && matchesCat && matchesCond && matchesStat && matchesLoc;
+        });
+
         renderFilteredAssets(filtered);
+    }
+
+    // Event Listeners for Filters
+    [searchInput, filterCategory, filterCondition, filterStatus, filterLocation].forEach(el => {
+        el?.addEventListener('change', applyFilters);
+        if(el === searchInput) el?.addEventListener('input', applyFilters);
     });
+
+    window.resetFilters = function() {
+        searchInput.value = "";
+        filterCategory.value = "";
+        filterCondition.value = "";
+        filterStatus.value = "";
+        filterLocation.value = "";
+        renderAssets();
+    };
+
+    function populateFilterDropdowns() {
+        const cats = [...new Set(assets.map(a => a.category))].sort();
+        const locs = [...new Set(assets.map(a => a.location))].sort();
+
+        if(filterCategory) {
+            filterCategory.innerHTML = '<option value="">Semua Kategori</option>' + 
+                cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        if(filterLocation) {
+            filterLocation.innerHTML = '<option value="">Semua Lokasi</option>' + 
+                locs.map(l => `<option value="${l}">${l}</option>`).join('');
+        }
+    }
 
     function renderFilteredAssets(filtered) {
         const dBody = document.querySelector(".dashboard-tbody");
