@@ -6,11 +6,27 @@ const db = require('./db');
 const app = express();
 const PORT = 3000;
 
-setTimeout(() => {
-    // Migrasi: Tambah kolom date_return dan returned_by jika belum ada
-    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS date_return VARCHAR(50)", (err) => {});
-    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS returned_by VARCHAR(100)", (err) => {});
-}, 1000);
+// --- DATABASE INITIALIZER (Untuk Vercel Serverless) ---
+app.get('/api/init', async (req, res) => {
+    const runAsync = (query) => new Promise((resolve, reject) => {
+        db.run(query, (err) => { if (err) reject(err); else resolve(); });
+    });
+
+    try {
+        // Buat tabel jika belum ada
+        await runAsync(`CREATE TABLE IF NOT EXISTS assets (id TEXT PRIMARY KEY, name TEXT, brand TEXT, category TEXT, condition TEXT, status TEXT, location TEXT, owner TEXT, last_updated TEXT)`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS borrows (id TEXT PRIMARY KEY, asset_id TEXT, borrower TEXT, purpose TEXT, date_req TEXT, status TEXT, date_return TEXT, returned_by TEXT)`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, asset_id TEXT, issue_desc TEXT, priority TEXT, status TEXT)`);
+        
+        // Migrasi kolom jika sudah ada tabel lama
+        try { await runAsync("ALTER TABLE borrows ADD COLUMN date_return TEXT"); } catch(e){}
+        try { await runAsync("ALTER TABLE borrows ADD COLUMN returned_by TEXT"); } catch(e){}
+        
+        res.json({ message: "Database berhasil diinisialisasi & dimigrasi!" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 app.use(cors());
 app.use(express.json());
@@ -217,35 +233,6 @@ app.delete('/api/categories/:id', (req, res) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Kategori dihapus!" });
     });
-});
-
-// --- DATABASE INITIALIZER (Untuk Vercel Serverless) ---
-app.get('/api/init', async (req, res) => {
-    const runAsync = (query, params = []) => {
-        return new Promise((resolve, reject) => {
-            db.run(query, params, function(err) {
-                if (err) reject(err);
-                else resolve(this);
-            });
-        });
-    };
-
-    try {
-        await runAsync(`CREATE TABLE IF NOT EXISTS assets (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), condition VARCHAR(50), status VARCHAR(50), location VARCHAR(100), owner VARCHAR(100))`);
-        
-        // Memaksa Vercel menunggu update kolom selesai sebelum menutup koneksi
-        await runAsync(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS brand VARCHAR(255)`);
-        await runAsync(`ALTER TABLE assets ADD COLUMN IF NOT EXISTS last_updated VARCHAR(100)`);
-        
-        await runAsync(`CREATE TABLE IF NOT EXISTS borrows (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, borrower VARCHAR(100), purpose TEXT, date_req VARCHAR(50), status VARCHAR(50))`);
-        await runAsync(`CREATE TABLE IF NOT EXISTS tickets (id VARCHAR(50) PRIMARY KEY, asset_id VARCHAR(50) NOT NULL, issue_desc TEXT, priority VARCHAR(50), status VARCHAR(50))`);
-        await runAsync(`CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, username VARCHAR(100) UNIQUE NOT NULL, password VARCHAR(100) NOT NULL, role VARCHAR(50) NOT NULL, name VARCHAR(100) NOT NULL)`);
-        await runAsync(`CREATE TABLE IF NOT EXISTS categories (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL)`);
-
-        res.json({ success: true, message: "🎉 UPDATE BERHASIL! Database telah siap dengan struktur terbaru. Silakan kembali ke web." });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
 });
 
 // --- SEEDER MANUAL ---

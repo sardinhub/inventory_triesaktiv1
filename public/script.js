@@ -113,7 +113,7 @@ function renderBorrows() {
             <td>${b.date_req}</td>
             <td>
                 ${getStatusBadge(b.status)}
-                ${b.status === 'Close' && b.date_return ? `<br><small style="color:var(--text-muted); font-size:10px;">Kembali: ${b.date_return}</small>` : ''}
+                ${b.status === 'Close' && b.date_return ? `<br><small style="color:var(--text-muted); font-size:10px;">Kembali: ${b.date_return} oleh ${b.returned_by || '-'}</small>` : ''}
             </td>
             <td>
                 ${b.status === 'Menunggu Approval' || b.status === 'Requested' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
@@ -295,24 +295,30 @@ window.deleteTicket = async function(id) {
 };
 
 window.returnAsset = async function(id) {
-    const res = await Swal.fire({
+    const { value: returnedBy } = await Swal.fire({
         title: 'Kembalikan Aset?',
-        text: `Aset ${id} akan dikembalikan ke status Tersedia.`,
-        icon: 'question',
+        text: `Masukkan nama orang yang mengembalikan aset ${id}:`,
+        input: 'text',
+        inputPlaceholder: 'Nama Pengembali...',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Kembalikan'
+        confirmButtonText: 'Ya, Kembalikan',
+        inputValidator: (value) => {
+            if (!value) return 'Nama pengembali harus diisi!'
+        }
     });
-    if(res.isConfirmed) {
+
+    if(returnedBy) {
         await fetch(`/api/assets/${id}`, { 
             method: 'PUT', 
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 ...assets.find(a => a.id === id),
                 status: 'Tersedia',
-                owner: '-'
+                owner: '-',
+                returned_by: returnedBy
             })
         });
-        Swal.fire('Berhasil!', 'Aset telah dikembalikan.', 'success');
+        Swal.fire('Berhasil!', 'Aset telah dikembalikan dan dicatat.', 'success');
         fetchData();
     }
 };
