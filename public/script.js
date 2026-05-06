@@ -295,31 +295,61 @@ window.deleteTicket = async function(id) {
 };
 
 window.returnAsset = async function(id) {
+    const asset = assets.find(a => a.id === id);
+    const assetDisplayName = asset ? `${asset.id} - ${asset.name}` : id;
+
     const { value: returnedBy } = await Swal.fire({
-        title: 'Kembalikan Aset?',
-        text: `Masukkan nama orang yang mengembalikan aset ${id}:`,
+        title: 'Konfirmasi Pengembalian',
+        html: `
+            <div style="margin-bottom: 15px;">
+                <i class="fa-solid fa-rotate-left" style="font-size: 3rem; color: var(--primary); margin-bottom: 15px;"></i>
+                <p style="font-weight: 600; color: var(--text-dark); margin-bottom: 5px;">Aset yang dikembalikan:</p>
+                <p style="font-family: monospace; background: var(--bg-card); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); color: var(--primary);">
+                    ${assetDisplayName}
+                </p>
+            </div>
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 10px;">Siapa yang menyerahkan aset ini?</p>
+        `,
         input: 'text',
-        inputPlaceholder: 'Nama Pengembali...',
+        inputPlaceholder: 'Ketik Nama Pengembali...',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Kembalikan',
+        confirmButtonText: 'Konfirmasi & Simpan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#4F46E5',
+        cancelButtonColor: '#94A3B8',
         inputValidator: (value) => {
-            if (!value) return 'Nama pengembali harus diisi!'
+            if (!value) return 'Nama pengembali wajib diisi!'
+        },
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdrop: `rgba(15, 23, 42, 0.4)`,
+        customClass: {
+            popup: 'glass-modal-swal',
+            title: 'swal-title-custom'
         }
     });
 
     if(returnedBy) {
-        await fetch(`/api/assets/${id}`, { 
-            method: 'PUT', 
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                ...assets.find(a => a.id === id),
-                status: 'Tersedia',
-                owner: '-',
-                returned_by: returnedBy
-            })
-        });
-        Swal.fire('Berhasil!', 'Aset telah dikembalikan dan dicatat.', 'success');
-        fetchData();
+        try {
+            await fetch(`/api/assets/${id}`, { 
+                method: 'PUT', 
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    ...asset,
+                    status: 'Tersedia',
+                    owner: '-',
+                    returned_by: returnedBy
+                })
+            });
+            Swal.fire({
+                title: 'Berhasil!',
+                text: 'Aset telah kembali ke gudang.',
+                icon: 'success',
+                confirmButtonColor: '#4F46E5'
+            });
+            fetchData();
+        } catch(err) {
+            Swal.fire('Error', 'Gagal memproses data.', 'error');
+        }
     }
 };
 
