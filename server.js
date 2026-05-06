@@ -52,7 +52,8 @@ app.put('/api/assets/:id', async (req, res) => {
         
         // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
         if (status === 'Tersedia') {
-            await runAsync(`UPDATE borrows SET status='Closed' WHERE asset_id=? AND status='Approved'`, [req.params.id]);
+            const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND (status='Disetujui' OR status='Approved')`, [now, req.params.id]);
         }
         
         res.json({ message: "Aset diupdate dan status peminjaman disinkronkan!" });

@@ -94,7 +94,8 @@ db.run(`CREATE TABLE IF NOT EXISTS borrows (
     borrower VARCHAR(100),
     purpose TEXT,
     date_req VARCHAR(50),
-    status VARCHAR(50)
+    status VARCHAR(50),
+    date_return VARCHAR(50)
 )`);
 
 db.run(`CREATE TABLE IF NOT EXISTS tickets (
