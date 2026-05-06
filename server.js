@@ -6,6 +6,13 @@ const db = require('./db');
 const app = express();
 const PORT = 3000;
 
+setTimeout(() => {
+    // Pastikan kolom baru ditambahkan jika tabel sudah ada (Migration)
+    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS date_return VARCHAR(50)", (err) => {
+        if(err) console.log("Info: Kolom date_return mungkin sudah ada.");
+    });
+}, 1000);
+
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
@@ -51,10 +58,10 @@ app.put('/api/assets/:id', async (req, res) => {
             [name, brand, category, condition, status, location, owner, last_updated, req.params.id]);
         
         // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
-        // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
         if (status === 'Tersedia') {
             const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
-            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND status NOT IN ('Close', 'Closed', 'Ditolak', 'Menunggu Approval')`, [now, req.params.id]);
+            // Update semua peminjaman yang belum Close untuk aset ini
+            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND status NOT IN ('Close', 'Closed', 'Ditolak')`, [now, req.params.id]);
         }
         
         res.json({ message: "Aset diupdate dan status peminjaman disinkronkan!" });
