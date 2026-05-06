@@ -36,11 +36,6 @@
                 <div id="loginError" style="color:var(--danger); font-size:13px; text-align:center; margin-bottom:16px; display:none;"></div>
                 <button type="submit" class="primary-btn" style="width:100%; justify-content:center;">Login Secure</button>
             </form>
-            <div class="login-demo-info">
-                Akses Demo:<br>
-                Admin: <b>admin</b> / <b>admin123</b> &nbsp; | &nbsp; 
-                Gudang: <b>staf</b> / <b>staf123</b>
-            </div>
         </div>
     </div>
 
@@ -251,12 +246,9 @@
                         <!-- Scanner Div (Diisi otomatis oleh JS library html5-qrcode) -->
                         <div id="qr-reader" style="width:100%; max-width: 500px; background: white; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg);"></div>
                         
-                        <div style="margin-top: 24px; text-align: center; background: var(--bg-card); padding: 20px; border-radius: 12px; box-shadow: var(--shadow-sm); border: 1px solid var(--border);">
-                            <p style="margin-bottom: 12px; font-weight: 500;">Pencarian Manual (Jika kamera tidak tersedia):</p>
-                            <div style="display:flex; justify-content:center; gap:8px;">
-                                <input type="text" id="manualQrInput" placeholder="Misal: INV-ELK-001" style="width:250px;">
-                                <button class="primary-btn" onclick="simulateQrScan()">Cari Aset</button>
-                            </div>
+                        <div style="display:flex; justify-content:center; gap:8px; margin-top: 20px;">
+                            <input type="text" id="manualQrInput" placeholder="Misal: INV-ELK-001" style="width:250px;">
+                            <button class="primary-btn" onclick="simulateQrScan()">Cari Aset</button>
                         </div>
                     </div>
                 </div>
