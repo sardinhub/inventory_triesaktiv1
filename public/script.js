@@ -87,11 +87,19 @@ function renderAssets() {
     if(aBody) aBody.innerHTML = rows;
     
     // --- SMART DROPDOWN (DATALIST) ---
-    const datalistOptions = assets.map(a => `<option value="${a.id} - ${a.name}">`).join('');
+    // Dropdown Peminjaman: Hanya aset yang "Tersedia"
+    const borrowOptions = assets
+        .filter(a => a.status === 'Tersedia')
+        .map(a => `<option value="${a.id} | ${a.name}">`).join('');
     const borrowList = document.getElementById('borrowAssetList');
-    if(borrowList) borrowList.innerHTML = datalistOptions;
+    if(borrowList) borrowList.innerHTML = borrowOptions;
+    
+    // Dropdown Maintenance: Semua aset yang "Rusak" atau perlu servis
+    const maintOptions = assets
+        .filter(a => a.condition === 'Rusak' || a.status === 'Servis')
+        .map(a => `<option value="${a.id} | ${a.name}">`).join('');
     const maintList = document.getElementById('maintAssetList');
-    if(maintList) maintList.innerHTML = datalistOptions;
+    if(maintList) maintList.innerHTML = maintOptions;
 }
 
 function renderBorrows() {
@@ -746,9 +754,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const asset_id = document.getElementById('borrowItem').value.split(' - ')[0].trim();
+        const rawValue = document.getElementById('borrowItem').value;
+        const asset_id = rawValue.includes('|') ? rawValue.split('|')[0].trim() : rawValue.trim();
+        
         if(!assets.find(a => a.id === asset_id)) {
-            return Swal.fire('Aset Tidak Valid', 'Mohon ketik lalu pilih aset dari daftar dropdown yang muncul.', 'error');
+            return Swal.fire('Aset Tidak Valid', 'Mohon pilih aset dari daftar yang muncul.', 'error');
         }
         
         const conf = await Swal.fire({ title: 'Ajukan Peminjaman?', icon: 'question', showCancelButton: true, confirmButtonText: 'Ajukan' });
@@ -772,9 +782,11 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('maintenanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const asset_id = document.getElementById('maintItem').value.split(' - ')[0].trim();
+        const rawValue = document.getElementById('maintItem').value;
+        const asset_id = rawValue.includes('|') ? rawValue.split('|')[0].trim() : rawValue.trim();
+
         if(!assets.find(a => a.id === asset_id)) {
-            return Swal.fire('Aset Tidak Valid', 'Mohon ketik lalu pilih aset dari daftar dropdown yang muncul.', 'error');
+            return Swal.fire('Aset Tidak Valid', 'Mohon pilih aset dari daftar yang muncul.', 'error');
         }
 
         const data = {
