@@ -141,7 +141,6 @@ function renderCategories() {
 }
 
 function renderAssets() {
-    const dBody = document.querySelector(".dashboard-tbody");
     const aBody = document.querySelector(".daftar-aset-tbody");
     const rows = assets.map(a => `
         <tr>
@@ -167,7 +166,6 @@ function renderAssets() {
             </td>
         </tr>
     `).join('');
-    if(dBody) dBody.innerHTML = rows;
     if(aBody) aBody.innerHTML = rows;
     
     // Dropdown Peminjaman: Hanya aset yang "Tersedia"
@@ -735,7 +733,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
     function renderFilteredAssets(filtered) {
-        const dBody = document.querySelector(".dashboard-tbody");
         const aBody = document.querySelector(".daftar-aset-tbody");
         const rows = filtered.map(a => `
             <tr>
@@ -761,7 +758,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 </td>
             </tr>
         `).join('');
-        if(dBody) dBody.innerHTML = rows;
         if(aBody) aBody.innerHTML = rows;
     }
     
