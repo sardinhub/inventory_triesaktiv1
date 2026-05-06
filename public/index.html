@@ -170,10 +170,48 @@
                         <button class="primary-btn btn-tambah-aset"><i class="fa-solid fa-plus"></i> Tambah Aset Baru</button>
                     </div>
                     <div class="table-container fade-in">
-                        <div class="table-header">
-                            <h3>Semua Data</h3>
-                            <div class="table-actions">
+                        <div class="table-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <h3>Semua Data</h3>
                                 <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
+                            </div>
+                            
+                            <!-- ADVANCED FILTER BAR -->
+                            <div class="filter-bar glass-panel" style="padding: 15px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: rgba(255,255,255,0.5);">
+                                <div class="filter-item">
+                                    <label style="font-size: 11px; font-weight: 700; color: var(--primary); display: block; margin-bottom: 5px; text-transform: uppercase;">Kategori</label>
+                                    <select id="filterCategory" class="filter-select" style="width: 100%;">
+                                        <option value="">Semua Kategori</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label style="font-size: 11px; font-weight: 700; color: var(--primary); display: block; margin-bottom: 5px; text-transform: uppercase;">Kondisi</label>
+                                    <select id="filterCondition" class="filter-select" style="width: 100%;">
+                                        <option value="">Semua Kondisi</option>
+                                        <option value="Bagus">Bagus</option>
+                                        <option value="Rusak">Rusak</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label style="font-size: 11px; font-weight: 700; color: var(--primary); display: block; margin-bottom: 5px; text-transform: uppercase;">Status</label>
+                                    <select id="filterStatus" class="filter-select" style="width: 100%;">
+                                        <option value="">Semua Status</option>
+                                        <option value="Tersedia">Tersedia</option>
+                                        <option value="Dipinjam">Dipinjam</option>
+                                        <option value="Servis">Servis</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label style="font-size: 11px; font-weight: 700; color: var(--primary); display: block; margin-bottom: 5px; text-transform: uppercase;">Lokasi</label>
+                                    <select id="filterLocation" class="filter-select" style="width: 100%;">
+                                        <option value="">Semua Lokasi</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item" style="display: flex; align-items: flex-end;">
+                                    <button onclick="resetFilters()" class="secondary-btn" style="width: 100%; height: 38px; border-style: dashed;">
+                                        <i class="fa-solid fa-filter-circle-xmark"></i> Reset
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="table-responsive">
