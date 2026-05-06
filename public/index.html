@@ -524,8 +524,9 @@
                     </div>
                     <div class="form-group">
                         <label>Pilih Aset yang Dipinjam</label>
-                        <input type="text" id="borrowItem" list="borrowAssetList" placeholder="Ketik nama atau ID aset..." required autocomplete="off">
-                        <datalist id="borrowAssetList"></datalist>
+                        <select id="borrowItem" required>
+                            <option value="">-- Pilih Aset Tersedia --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Alasan Peminjaman</label>
@@ -551,8 +552,9 @@
                 <form id="maintenanceForm">
                     <div class="form-group">
                         <label>Pilih Aset Bermasalah</label>
-                        <input type="text" id="maintItem" list="maintAssetList" placeholder="Ketik nama atau ID aset..." required autocomplete="off">
-                        <datalist id="maintAssetList"></datalist>
+                        <select id="maintItem" required>
+                            <option value="">-- Pilih Aset Bermasalah --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Deskripsi Kendala</label>

@@ -86,25 +86,20 @@ function renderAssets() {
     if(dBody) dBody.innerHTML = rows;
     if(aBody) aBody.innerHTML = rows;
     
-    // --- SMART DROPDOWN (DATALIST) ---
     // Dropdown Peminjaman: Hanya aset yang "Tersedia"
-    const borrowOptions = assets
-        .filter(a => a.status === 'Tersedia')
-        .map(a => `<option value="${a.id} | ${a.name}">`).join('');
-    const borrowList = document.getElementById('borrowAssetList');
-    if(borrowList) {
-        borrowList.innerHTML = ''; // Clear old data
-        borrowList.innerHTML = borrowOptions;
+    const borrowSelect = document.getElementById('borrowItem');
+    if(borrowSelect) {
+        borrowSelect.innerHTML = '<option value="">-- Pilih Aset Tersedia --</option>' + 
+            assets.filter(a => a.status === 'Tersedia')
+                  .map(a => `<option value="${a.id}">${a.id} | ${a.name}</option>`).join('');
     }
     
     // Dropdown Maintenance: Semua aset yang "Rusak" atau perlu servis
-    const maintOptions = assets
-        .filter(a => a.condition === 'Rusak' || a.status === 'Servis')
-        .map(a => `<option value="${a.id} | ${a.name}">`).join('');
-    const maintList = document.getElementById('maintAssetList');
-    if(maintList) {
-        maintList.innerHTML = ''; // Clear old data
-        maintList.innerHTML = maintOptions;
+    const maintSelect = document.getElementById('maintItem');
+    if(maintSelect) {
+        maintSelect.innerHTML = '<option value="">-- Pilih Aset Bermasalah --</option>' + 
+            assets.filter(a => a.condition === 'Rusak' || a.status === 'Servis')
+                  .map(a => `<option value="${a.id}">${a.id} | ${a.name}</option>`).join('');
     }
 }
 
@@ -760,12 +755,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('borrowForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const rawValue = document.getElementById('borrowItem').value;
-        const asset_id = rawValue.includes('|') ? rawValue.split('|')[0].trim() : rawValue.trim();
-        
-        if(!assets.find(a => a.id === asset_id)) {
-            return Swal.fire('Aset Tidak Valid', 'Mohon pilih aset dari daftar yang muncul.', 'error');
-        }
+        const asset_id = document.getElementById('borrowItem').value;
+        if(!asset_id) return Swal.fire('Pilih Aset', 'Silakan pilih aset dari daftar.', 'warning');
         
         const conf = await Swal.fire({ title: 'Ajukan Peminjaman?', icon: 'question', showCancelButton: true, confirmButtonText: 'Ajukan' });
         if(!conf.isConfirmed) return;
@@ -788,12 +779,8 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('maintenanceForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        const rawValue = document.getElementById('maintItem').value;
-        const asset_id = rawValue.includes('|') ? rawValue.split('|')[0].trim() : rawValue.trim();
-
-        if(!assets.find(a => a.id === asset_id)) {
-            return Swal.fire('Aset Tidak Valid', 'Mohon pilih aset dari daftar yang muncul.', 'error');
-        }
+        const asset_id = document.getElementById('maintItem').value;
+        if(!asset_id) return Swal.fire('Pilih Aset', 'Silakan pilih aset dari daftar.', 'warning');
 
         const data = {
             id: `TCK-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
