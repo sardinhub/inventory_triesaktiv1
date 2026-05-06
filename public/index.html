@@ -132,28 +132,18 @@
                         </div>
                     </div>
 
-                    <div class="table-container fade-in">
-                        <div class="table-header">
-                            <h3>Aset Terbaru (Live)</h3>
+                    <div class="settings-grid fade-in" style="margin-top: 30px;">
+                        <div class="setting-card glass-panel" style="text-align: center; padding: 25px;">
+                            <h3 style="margin-bottom: 25px; color: var(--primary); font-weight: 600;"><i class="fa-solid fa-chart-pie"></i> Distribusi Status Aset</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="statusChart"></canvas>
+                            </div>
                         </div>
-                        <div class="table-responsive">
-                            <table class="assetTable">
-                                <thead>
-                                    <tr>
-                                        <th>ID Aset</th>
-                                        <th>Nama Barang</th>
-                                        <th>Merk & Type</th>
-                                        <th>Kategori</th>
-                                        <th>Kondisi</th>
-                                        <th>Status</th>
-                                        <th>Lokasi Saat Ini</th>
-                                        <th>Peminjam/PIC</th>
-                                        <th>Riwayat Terakhir</th>
-                                        <th>Aksi</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="dashboard-tbody"></tbody>
-                            </table>
+                        <div class="setting-card glass-panel" style="text-align: center; padding: 25px;">
+                            <h3 style="margin-bottom: 25px; color: var(--primary); font-weight: 600;"><i class="fa-solid fa-chart-bar"></i> Proporsi Kategori</h3>
+                            <div style="height: 300px; display: flex; justify-content: center;">
+                                <canvas id="categoryChart"></canvas>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -324,19 +314,11 @@
                         </div>
                         <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-file-csv"></i> Download Data Master</button>
                     </div>
-                    <div class="settings-grid fade-in">
-                        <div class="setting-card" style="text-align: center;">
-                            <h3 style="margin-bottom: 20px;">Distribusi Status Aset</h3>
-                            <div style="height: 300px; display: flex; justify-content: center;">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-                        <div class="setting-card" style="text-align: center;">
-                            <h3 style="margin-bottom: 20px;">Proporsi Berdasarkan Kategori</h3>
-                            <div style="height: 300px; display: flex; justify-content: center;">
-                                <canvas id="categoryChart"></canvas>
-                            </div>
-                        </div>
+                    <div class="glass-panel" style="padding: 40px; text-align: center; margin-top: 20px;">
+                        <i class="fa-solid fa-file-circle-check" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px; opacity: 0.5;"></i>
+                        <h2>Laporan Siap Diunduh</h2>
+                        <p style="color: var(--text-muted); margin-bottom: 25px;">Data inventaris Anda selalu sinkron dengan database pusat.</p>
+                        <button class="primary-btn" onclick="exportToCSV()" style="margin: 0 auto;"><i class="fa-solid fa-file-csv"></i> Ekspor Data Master (CSV)</button>
                     </div>
                 </div>
 
