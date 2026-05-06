@@ -744,6 +744,31 @@ input[type="text"]:focus, select:focus {
     box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
 }
 
+/* SWEETALERT CUSTOM STYLES */
+.glass-modal-swal {
+    border-radius: 20px !important;
+    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+}
+
+.swal-input-aesthetic {
+    width: 80% !important;
+    margin: 15px auto !important;
+    border-radius: 10px !important;
+    border: 1px solid #E2E8F0 !important;
+    padding: 12px 15px !important;
+    font-size: 15px !important;
+    box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.05) !important;
+    transition: all 0.3s ease !important;
+    display: flex !important;
+}
+
+.swal-input-aesthetic:focus {
+    border-color: #4F46E5 !important;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1) !important;
+    outline: none !important;
+}
+
 .login-box .primary-btn {
     height: 52px;
     font-size: 16px;

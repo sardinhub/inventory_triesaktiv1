@@ -408,9 +408,11 @@ window.returnAsset = async function(id) {
         },
         background: 'rgba(255, 255, 255, 0.95)',
         backdrop: `rgba(15, 23, 42, 0.4)`,
+        width: '450px',
         customClass: {
             popup: 'glass-modal-swal',
-            title: 'swal-title-custom'
+            title: 'swal-title-custom',
+            input: 'swal-input-aesthetic'
         }
     });
 
