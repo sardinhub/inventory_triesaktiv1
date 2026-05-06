@@ -7,10 +7,9 @@ const app = express();
 const PORT = 3000;
 
 setTimeout(() => {
-    // Pastikan kolom baru ditambahkan jika tabel sudah ada (Migration)
-    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS date_return VARCHAR(50)", (err) => {
-        if(err) console.log("Info: Kolom date_return mungkin sudah ada.");
-    });
+    // Migrasi: Tambah kolom date_return dan returned_by jika belum ada
+    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS date_return VARCHAR(50)", (err) => {});
+    db.run("ALTER TABLE borrows ADD COLUMN IF NOT EXISTS returned_by VARCHAR(100)", (err) => {});
 }, 1000);
 
 app.use(cors());
@@ -52,7 +51,7 @@ app.put('/api/assets/:id', async (req, res) => {
         db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
     });
 
-    const { name, brand, category, condition, status, location, owner, last_updated } = req.body;
+    const { name, brand, category, condition, status, location, owner, last_updated, returned_by } = req.body;
     try {
         await runAsync(`UPDATE assets SET name=?, brand=?, category=?, condition=?, status=?, location=?, owner=?, last_updated=? WHERE id=?`, 
             [name, brand, category, condition, status, location, owner, last_updated, req.params.id]);
@@ -61,7 +60,7 @@ app.put('/api/assets/:id', async (req, res) => {
         if (status === 'Tersedia') {
             const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
             // Update semua peminjaman yang belum Close untuk aset ini
-            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND status NOT IN ('Close', 'Closed', 'Ditolak')`, [now, req.params.id]);
+            await runAsync(`UPDATE borrows SET status='Close', date_return=?, returned_by=? WHERE asset_id=? AND status NOT IN ('Close', 'Closed', 'Ditolak')`, [now, returned_by || "Staff", req.params.id]);
         }
         
         res.json({ message: "Aset diupdate dan status peminjaman disinkronkan!" });
