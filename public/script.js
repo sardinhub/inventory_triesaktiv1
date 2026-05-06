@@ -31,6 +31,66 @@ window.populateFilterDropdowns = function() {
     }
 };
 
+window.updateNotificationBadge = function() {
+    const badge = document.getElementById('notif-badge');
+    if(!badge) return;
+
+    // Hitung Peminjaman yang butuh approval
+    const pendingBorrows = borrows.filter(b => b.status === 'Menunggu Approval' || b.status === 'Requested').length;
+    // Hitung Tiket Maintenance yang masih Open
+    const openTickets = tickets.filter(t => t.status === 'Open').length;
+
+    const total = pendingBorrows + openTickets;
+
+    if(total > 0) {
+        badge.innerText = total;
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+};
+
+window.showNotifications = function() {
+    const pendingBorrows = borrows.filter(b => b.status === 'Menunggu Approval' || b.status === 'Requested');
+    const openTickets = tickets.filter(t => t.status === 'Open');
+
+    if(pendingBorrows.length === 0 && openTickets.length === 0) {
+        return Swal.fire({
+            title: 'Tidak Ada Notifikasi',
+            text: 'Semua tugas Anda sudah beres! Kerja bagus.',
+            icon: 'success',
+            confirmButtonColor: '#4F46E5'
+        });
+    }
+
+    let html = '<div style="text-align: left; font-size: 14px;">';
+    if(pendingBorrows.length > 0) {
+        html += `<p style="margin-bottom: 8px;"><b>📦 Peminjaman:</b> Ada ${pendingBorrows.length} permintaan menunggu approval.</p>`;
+    }
+    if(openTickets.length > 0) {
+        html += `<p style="margin-bottom: 8px;"><b>🛠️ Maintenance:</b> Ada ${openTickets.length} tiket perbaikan yang terbuka.</p>`;
+    }
+    html += '</div>';
+
+    Swal.fire({
+        title: 'Tugas Perlu Perhatian',
+        html: html,
+        icon: 'info',
+        confirmButtonText: 'Buka Menu Terkait',
+        showCancelButton: true,
+        cancelButtonText: 'Tutup',
+        confirmButtonColor: '#4F46E5'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            if (pendingBorrows.length > 0) {
+                document.querySelector('[data-target="view-peminjaman"]').click();
+            } else if (openTickets.length > 0) {
+                document.querySelector('[data-target="view-maintenance"]').click();
+            }
+        }
+    });
+};
+
 // --- API FETCHERS ---
 async function fetchData() {
     try {
@@ -49,6 +109,7 @@ async function fetchData() {
         updateDashboardCards();
         renderCharts();
         populateFilterDropdowns(); // Populate Category & Location filters
+        updateNotificationBadge(); // Update bell badge
     } catch(err) { 
         console.error("Error fetching data:", err); 
         if(err.message.includes('401')) logout();

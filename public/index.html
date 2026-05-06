@@ -75,7 +75,10 @@
                     <input type="text" placeholder="Cari nama aset, ID, atau lokasi...">
                 </div>
                 <div class="topbar-actions">
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i><span class="badge">3</span></button>
+                    <button class="icon-btn" onclick="showNotifications()" title="Notifikasi Pending">
+                        <i class="fa-regular fa-bell"></i>
+                        <span id="notif-badge" class="badge" style="display: none;">0</span>
+                    </button>
                     <div class="user-profile">
                         <img src="" id="userAvatar" alt="Profile">
                         <div style="display:flex; flex-direction:column;">
