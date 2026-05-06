@@ -4,8 +4,11 @@ require('dotenv').config();
 // Cerdas mencari koneksi apapun yang disediakan oleh Vercel (Neon/Supabase/dll)
 const connString = process.env.POSTGRES_URL || 
                    process.env.DATABASE_URL || 
-                   process.env.NEON_DATABASE_URL || 
-                   "postgresql://neondb_owner:npg_leLDznq59sSO@ep-noisy-tooth-aozt34x3-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require";
+                   process.env.NEON_DATABASE_URL;
+
+if (!connString) {
+    console.warn("⚠️ PERINGATAN: Variabel Database tidak ditemukan! Pastikan .env sudah terkonfigurasi.");
+}
 
 const pool = new Pool({
   connectionString: connString,

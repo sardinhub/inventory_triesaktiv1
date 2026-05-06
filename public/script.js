@@ -71,11 +71,15 @@ function renderAssets() {
             <td style="font-weight: 500;">${a.owner}</td>
             <td>${a.last_updated || '-'}</td>
             <td>
-                <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
-                ${currentUser && currentUser.role === 'Admin' ? `
-                <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
-                <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
-                ` : ''}
+                <div style="display:flex; gap:4px;">
+                    <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
+                    ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
+                    ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
+                    ${currentUser && currentUser.role === 'Admin' ? `
+                    <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                    <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                    ` : ''}
+                </div>
             </td>
         </tr>
     `).join('');
@@ -279,7 +283,33 @@ window.deleteTicket = async function(id) {
     }
 };
 
-// --- MASTER DATA & USERS MANAGEMENT ---
+window.returnAsset = async function(id) {
+    const res = await Swal.fire({
+        title: 'Kembalikan Aset?',
+        text: `Aset ${id} akan dikembalikan ke status Tersedia.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, Kembalikan'
+    });
+    if(res.isConfirmed) {
+        await fetch(`/api/assets/${id}`, { 
+            method: 'PUT', 
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                ...assets.find(a => a.id === id),
+                status: 'Tersedia',
+                owner: '-'
+            })
+        });
+        Swal.fire('Berhasil!', 'Aset telah dikembalikan.', 'success');
+        fetchData();
+    }
+};
+
+window.openMaintenance = function(id) {
+    document.getElementById('maintenanceModal').classList.add('active');
+    document.getElementById('maintItem').value = id;
+};
 window.openCategoriesModal = async function() {
     document.getElementById('categoriesModal').classList.add('active');
     renderCategoriesTable();
@@ -515,8 +545,55 @@ document.addEventListener("DOMContentLoaded", () => {
                 errEl.innerText = data.error || data.message || "Login Gagal!";
                 errEl.style.display = 'block';
             }
-        } catch(e) { errEl.innerText = "Koneksi ke server terputus."; errEl.style.display = 'block'; }
     });
+    
+    // Search Functionality
+    const searchInput = document.querySelector('.search-bar input');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        if(!term) {
+            renderAssets();
+            return;
+        }
+        const filtered = assets.filter(a => 
+            a.name.toLowerCase().includes(term) || 
+            a.id.toLowerCase().includes(term) || 
+            a.category.toLowerCase().includes(term) ||
+            a.location.toLowerCase().includes(term)
+        );
+        renderFilteredAssets(filtered);
+    });
+
+    function renderFilteredAssets(filtered) {
+        const dBody = document.querySelector(".dashboard-tbody");
+        const aBody = document.querySelector(".daftar-aset-tbody");
+        const rows = filtered.map(a => `
+            <tr>
+                <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
+                <td class="asset-name">${a.name}</td>
+                <td>${a.brand || '-'}</td>
+                <td>${a.category}</td>
+                <td>${getConditionBadge(a.condition)}</td>
+                <td>${getStatusBadge(a.status)}</td>
+                <td><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
+                <td style="font-weight: 500;">${a.owner}</td>
+                <td>${a.last_updated || '-'}</td>
+                <td>
+                    <div style="display:flex; gap:4px;">
+                        <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
+                        ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
+                        ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
+                        ${currentUser && currentUser.role === 'Admin' ? `
+                        <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+        if(dBody) dBody.innerHTML = rows;
+        if(aBody) aBody.innerHTML = rows;
+    }
     
     // SPA Navigation
     const navItems = document.querySelectorAll('.nav-item');
