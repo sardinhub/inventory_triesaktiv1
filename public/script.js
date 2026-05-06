@@ -101,6 +101,7 @@ function renderAssets() {
             assets.filter(a => a.condition === 'Rusak' || a.status === 'Servis')
                   .map(a => `<option value="${a.id}">${a.id} | ${a.name}</option>`).join('');
     }
+    if(typeof populateFilterDropdowns === 'function') populateFilterDropdowns();
 }
 
 function renderBorrows() {
@@ -646,16 +647,25 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function populateFilterDropdowns() {
-        const cats = [...new Set(assets.map(a => a.category))].sort();
-        const locs = [...new Set(assets.map(a => a.location))].sort();
+        const fCat = document.getElementById('filterCategory');
+        const fLoc = document.getElementById('filterLocation');
+        
+        if(!assets || assets.length === 0) return;
 
-        if(filterCategory) {
-            filterCategory.innerHTML = '<option value="">Semua Kategori</option>' + 
+        const cats = [...new Set(assets.map(a => a.category))].filter(Boolean).sort();
+        const locs = [...new Set(assets.map(a => a.location))].filter(Boolean).sort();
+
+        if(fCat) {
+            const currentVal = fCat.value;
+            fCat.innerHTML = '<option value="">Semua Kategori</option>' + 
                 cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            fCat.value = currentVal;
         }
-        if(filterLocation) {
-            filterLocation.innerHTML = '<option value="">Semua Lokasi</option>' + 
+        if(fLoc) {
+            const currentVal = fLoc.value;
+            fLoc.innerHTML = '<option value="">Semua Lokasi</option>' + 
                 locs.map(l => `<option value="${l}">${l}</option>`).join('');
+            fLoc.value = currentVal;
         }
     }
 
