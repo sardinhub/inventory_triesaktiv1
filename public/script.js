@@ -202,7 +202,8 @@ function renderBorrows() {
                 ${b.status === 'Close' && b.date_return ? `<br><small style="color:var(--text-muted); font-size:10px;">Kembali: ${b.date_return} oleh ${b.returned_by || '-'}</small>` : ''}
             </td>
             <td>
-                ${b.status === 'Menunggu Approval' || b.status === 'Requested' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
+                ${(b.status === 'Menunggu Approval' || b.status === 'Requested') && (currentUser && currentUser.role === 'Admin') ? 
+                    `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
                 <button class="action-btn" onclick="deleteBorrow('${b.id}')" style="color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
