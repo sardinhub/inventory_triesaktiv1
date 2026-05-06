@@ -51,9 +51,10 @@ app.put('/api/assets/:id', async (req, res) => {
             [name, brand, category, condition, status, location, owner, last_updated, req.params.id]);
         
         // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
+        // Jika status aset dikembalikan ke 'Tersedia', otomatis TUTUP peminjaman yang aktif
         if (status === 'Tersedia') {
             const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
-            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND (status='Disetujui' OR status='Approved')`, [now, req.params.id]);
+            await runAsync(`UPDATE borrows SET status='Close', date_return=? WHERE asset_id=? AND status NOT IN ('Close', 'Closed', 'Ditolak', 'Menunggu Approval')`, [now, req.params.id]);
         }
         
         res.json({ message: "Aset diupdate dan status peminjaman disinkronkan!" });
@@ -79,7 +80,9 @@ app.get('/api/borrows', (req, res) => {
 
 app.post('/api/borrows', (req, res) => {
     const { id, asset_id, borrower_name, reason, request_date, status } = req.body;
-    db.run(`INSERT INTO borrows VALUES (?, ?, ?, ?, ?, ?)`, [id, asset_id, borrower_name, reason, request_date, status], function(err) {
+    // Menggunakan nama kolom eksplisit agar aman meski ada penambahan kolom di masa depan
+    db.run(`INSERT INTO borrows (id, asset_id, borrower, purpose, date_req, status) VALUES (?, ?, ?, ?, ?, ?)`, 
+        [id, asset_id, borrower_name, reason, request_date, status], function(err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ message: "Request dibuat!" });
     });

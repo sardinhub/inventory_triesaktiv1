@@ -41,10 +41,9 @@ function updateDashboardCards() {
 // --- RENDERERS ---
 function getConditionBadge(cond) { return cond==="Bagus"?`<span class="pill pill-success">Bagus</span>`:`<span class="pill pill-danger">Rusak</span>`; }
 function getStatusBadge(stat) {
-    if(["Tersedia","Approved","Resolved","Closed"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
-    if(["Dipinjam","Menunggu Approval","Open","Sedang"].includes(stat)) return `<span class="pill pill-warning">${stat}</span>`;
-    if(["Servis","Tinggi (Mendesak)"].includes(stat)) return `<span class="pill pill-danger">${stat}</span>`;
-    if(["Sedang Digunakan"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
+    if(["Tersedia","Approved","Resolved","Closed","Close"].includes(stat)) return `<span class="pill pill-success">${stat}</span>`;
+    if(["Dipinjam","Menunggu Approval","Open","Sedang","Disetujui"].includes(stat)) return `<span class="pill pill-warning">${stat}</span>`;
+    if(["Servis","Rusak","Tinggi (Mendesak)"].includes(stat)) return `<span class="pill pill-danger">${stat}</span>`;
     return `<span class="pill pill-info">${stat}</span>`;
 }
 
@@ -112,9 +111,12 @@ function renderBorrows() {
             <td style="font-weight:500;">${b.borrower}</td>
             <td>${b.asset_id} <br><small style="color:var(--text-muted)">${b.asset_name || ''}</small></td>
             <td>${b.date_req}</td>
-            <td>${getStatusBadge(b.status)}</td>
             <td>
-                ${b.status === 'Menunggu Approval' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
+                ${getStatusBadge(b.status)}
+                ${b.status === 'Close' && b.date_return ? `<br><small style="color:var(--text-muted); font-size:10px;">Kembali: ${b.date_return}</small>` : ''}
+            </td>
+            <td>
+                ${b.status === 'Menunggu Approval' || b.status === 'Requested' ? `<button class="secondary-btn" onclick="approveBorrow('${b.id}')" style="padding: 4px 8px; font-size:11px; margin-right:4px;"><i class="fa-solid fa-check"></i> Approve</button>` : ''}
                 <button class="action-btn" onclick="deleteBorrow('${b.id}')" style="color:var(--danger);" title="Hapus"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>
