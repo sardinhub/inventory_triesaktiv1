@@ -92,14 +92,20 @@ function renderAssets() {
         .filter(a => a.status === 'Tersedia')
         .map(a => `<option value="${a.id} | ${a.name}">`).join('');
     const borrowList = document.getElementById('borrowAssetList');
-    if(borrowList) borrowList.innerHTML = borrowOptions;
+    if(borrowList) {
+        borrowList.innerHTML = ''; // Clear old data
+        borrowList.innerHTML = borrowOptions;
+    }
     
     // Dropdown Maintenance: Semua aset yang "Rusak" atau perlu servis
     const maintOptions = assets
         .filter(a => a.condition === 'Rusak' || a.status === 'Servis')
         .map(a => `<option value="${a.id} | ${a.name}">`).join('');
     const maintList = document.getElementById('maintAssetList');
-    if(maintList) maintList.innerHTML = maintOptions;
+    if(maintList) {
+        maintList.innerHTML = ''; // Clear old data
+        maintList.innerHTML = maintOptions;
+    }
 }
 
 function renderBorrows() {
