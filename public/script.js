@@ -531,7 +531,11 @@ function onScanSuccess(decodedText) {
     } catch(e) {}
 
     const inputVal = decodedText.trim();
-    const a = assets.find(x => x.id.toLowerCase() === inputVal.toLowerCase());
+    // Cari aset dengan pembersihan spasi dan case-insensitive yang lebih kuat
+    const a = assets.find(x => {
+        if (!x.id) return false;
+        return x.id.trim().toLowerCase() === inputVal.toLowerCase();
+    });
     
     if(a) {
         Swal.fire({
