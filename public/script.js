@@ -8,6 +8,29 @@ let statusChartObj = null;
 let categoryChartObj = null;
 let html5QrcodeScanner = null;
 
+window.populateFilterDropdowns = function() {
+    const fCat = document.getElementById('filterCategory');
+    const fLoc = document.getElementById('filterLocation');
+    
+    if(!assets || assets.length === 0) return;
+
+    const cats = [...new Set(assets.map(a => a.category))].filter(Boolean).sort();
+    const locs = [...new Set(assets.map(a => a.location))].filter(Boolean).sort();
+
+    if(fCat) {
+        const currentVal = fCat.value;
+        fCat.innerHTML = '<option value="">Semua Kategori</option>' + 
+            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+        fCat.value = currentVal;
+    }
+    if(fLoc) {
+        const currentVal = fLoc.value;
+        fLoc.innerHTML = '<option value="">Semua Lokasi</option>' + 
+            locs.map(l => `<option value="${l}">${l}</option>`).join('');
+        fLoc.value = currentVal;
+    }
+};
+
 // --- API FETCHERS ---
 async function fetchData() {
     try {
@@ -101,7 +124,7 @@ function renderAssets() {
             assets.filter(a => a.condition === 'Rusak' || a.status === 'Servis')
                   .map(a => `<option value="${a.id}">${a.id} | ${a.name}</option>`).join('');
     }
-    if(typeof populateFilterDropdowns === 'function') populateFilterDropdowns();
+    if(window.populateFilterDropdowns) window.populateFilterDropdowns();
 }
 
 function renderBorrows() {
@@ -646,28 +669,6 @@ document.addEventListener("DOMContentLoaded", () => {
         renderAssets();
     };
 
-    function populateFilterDropdowns() {
-        const fCat = document.getElementById('filterCategory');
-        const fLoc = document.getElementById('filterLocation');
-        
-        if(!assets || assets.length === 0) return;
-
-        const cats = [...new Set(assets.map(a => a.category))].filter(Boolean).sort();
-        const locs = [...new Set(assets.map(a => a.location))].filter(Boolean).sort();
-
-        if(fCat) {
-            const currentVal = fCat.value;
-            fCat.innerHTML = '<option value="">Semua Kategori</option>' + 
-                cats.map(c => `<option value="${c}">${c}</option>`).join('');
-            fCat.value = currentVal;
-        }
-        if(fLoc) {
-            const currentVal = fLoc.value;
-            fLoc.innerHTML = '<option value="">Semua Lokasi</option>' + 
-                locs.map(l => `<option value="${l}">${l}</option>`).join('');
-            fLoc.value = currentVal;
-        }
-    }
 
     function renderFilteredAssets(filtered) {
         const dBody = document.querySelector(".dashboard-tbody");
