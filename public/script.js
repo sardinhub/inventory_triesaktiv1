@@ -640,6 +640,9 @@ function initApp() {
         const navPengaturan = document.getElementById('nav-pengaturan');
         if(navPengaturan) navPengaturan.style.display = 'none';
         
+        const navPengaturanMobile = document.getElementById('nav-pengaturan-mobile');
+        if(navPengaturanMobile) navPengaturanMobile.style.display = 'none';
+        
         document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
     }
 
