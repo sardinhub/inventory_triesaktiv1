@@ -158,8 +158,10 @@ function renderAssets() {
                     <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
                     ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
                     ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
+                    ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
+                    <button class="action-btn" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                    ` : ''}
                     ${currentUser && currentUser.role === 'Admin' ? `
-                    <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
                     <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
                     ` : ''}
                 </div>
@@ -754,8 +756,10 @@ document.addEventListener("DOMContentLoaded", () => {
                         <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
                         ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
                         ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
+                        ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
+                        <button class="action-btn" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                        ` : ''}
                         ${currentUser && currentUser.role === 'Admin' ? `
-                        <button class="action-btn admin-only" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
                         <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
                         ` : ''}
                     </div>
