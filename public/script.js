@@ -4,6 +4,7 @@ let borrows = [];
 let tickets = [];
 let categories = [];
 let users = [];
+let consumables = [];
 let statusChartObj = null;
 let categoryChartObj = null;
 let html5QrcodeScanner = null;
@@ -35,12 +36,11 @@ window.updateNotificationBadge = function() {
     const badge = document.getElementById('notif-badge');
     if(!badge) return;
 
-    // Hitung Peminjaman yang butuh approval
     const pendingBorrows = borrows.filter(b => b.status === 'Menunggu Approval' || b.status === 'Requested').length;
-    // Hitung Tiket Maintenance yang masih Open
     const openTickets = tickets.filter(t => t.status === 'Open').length;
+    const lowStockItems = consumables.filter(c => c.stock <= c.min_stock).length;
 
-    const total = pendingBorrows + openTickets;
+    const total = pendingBorrows + openTickets + lowStockItems;
 
     if(total > 0) {
         badge.innerText = total;
@@ -94,22 +94,24 @@ window.showNotifications = function() {
 // --- API FETCHERS ---
 async function fetchData() {
     try {
-        const [resAssets, resBorrows, resTickets, resCats] = await Promise.all([
-            fetch('/api/assets'), fetch('/api/borrows'), fetch('/api/tickets'), fetch('/api/categories')
+        const [resAssets, resBorrows, resTickets, resCats, resConsumables] = await Promise.all([
+            fetch('/api/assets'), fetch('/api/borrows'), fetch('/api/tickets'), fetch('/api/categories'), fetch('/api/consumables')
         ]);
         assets = await resAssets.json();
         borrows = await resBorrows.json();
         tickets = await resTickets.json();
         categories = await resCats.json();
+        consumables = await resConsumables.json();
         
         renderCategories();
         renderAssets();
         renderBorrows();
         renderTickets();
+        renderConsumables();
         updateDashboardCards();
         renderCharts();
-        populateFilterDropdowns(); // Populate Category & Location filters
-        updateNotificationBadge(); // Update bell badge
+        populateFilterDropdowns();
+        updateNotificationBadge();
     } catch(err) { 
         console.error("Error fetching data:", err); 
         if(err.message.includes('401')) logout();
@@ -121,6 +123,16 @@ function updateDashboardCards() {
     document.getElementById('count-tersedia').innerText = assets.filter(a => a.status === 'Tersedia').length;
     document.getElementById('count-dipinjam').innerText = assets.filter(a => a.status === 'Dipinjam').length;
     document.getElementById('count-rusak').innerText = assets.filter(a => a.condition === 'Rusak').length;
+    // Consumables dashboard
+    const lowStock = consumables.filter(c => c.stock <= c.min_stock).length;
+    const elLow = document.getElementById('count-low-stock');
+    if(elLow) elLow.innerText = lowStock;
+    const elTotal = document.getElementById('count-consumable-total');
+    if(elTotal) elTotal.innerText = consumables.length;
+    const elSafe = document.getElementById('count-consumable-safe');
+    if(elSafe) elSafe.innerText = consumables.filter(c => c.stock > c.min_stock).length;
+    const elLowC = document.getElementById('count-consumable-low');
+    if(elLowC) elLowC.innerText = lowStock;
 }
 
 // --- RENDERERS ---
@@ -138,6 +150,11 @@ function renderCategories() {
     const editCat = document.getElementById('editAssetCategory');
     if(addCat) addCat.innerHTML = `<option value="" disabled selected>Pilih Kategori</option>` + opts;
     if(editCat) editCat.innerHTML = opts;
+    // Consumable category dropdowns
+    const conCat = document.getElementById('consumableCategory');
+    const conCatEdit = document.getElementById('editConsumableCategory');
+    if(conCat) conCat.innerHTML = `<option value="" disabled selected>Pilih Kategori</option>` + opts;
+    if(conCatEdit) conCatEdit.innerHTML = opts;
 }
 
 function renderAssets() {
@@ -986,4 +1003,227 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById('addUserForm').reset();
         openUsersModal(); // Refresh UI
     });
+
+    // ============================
+    // CONSUMABLES MODULE
+    // ============================
+    setupModal('.btn-tambah-consumable', 'addConsumableModal', '#addConsumableModal .closeAddConsumableBtn');
+    setupModal('.closeEditConsumableBtn', 'editConsumableModal', '.closeEditConsumableBtn');
+
+    // POST: Tambah Bahan
+    document.getElementById('addConsumableForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const cat = document.getElementById('consumableCategory').value;
+        const prefix = cat ? cat.substring(0,3).toUpperCase() : 'BHP';
+        const data = {
+            id: `STK-${prefix}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
+            name: document.getElementById('consumableName').value,
+            category: cat,
+            unit: document.getElementById('consumableUnit').value,
+            stock: parseInt(document.getElementById('consumableStock').value) || 0,
+            min_stock: parseInt(document.getElementById('consumableMinStock').value) || 5,
+            location: document.getElementById('consumableLocation').value,
+            last_updated: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })
+        };
+        try {
+            const res = await fetch('/api/consumables', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if(!res.ok) { const r = await res.json(); return Swal.fire('Error', r.error, 'error'); }
+            document.getElementById('addConsumableModal').classList.remove('active');
+            Swal.fire('Tersimpan!', 'Bahan habis pakai berhasil ditambahkan.', 'success');
+            fetchData();
+        } catch(err) { Swal.fire('Error', 'Gagal menyimpan data.', 'error'); }
+    });
+
+    // PUT: Edit Bahan
+    document.getElementById('editConsumableForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = document.getElementById('editConsumableId').value;
+        const data = {
+            name: document.getElementById('editConsumableName').value,
+            category: document.getElementById('editConsumableCategory').value,
+            unit: document.getElementById('editConsumableUnit').value,
+            stock: parseInt(document.getElementById('editConsumableStock').value),
+            min_stock: parseInt(document.getElementById('editConsumableMinStock').value),
+            location: document.getElementById('editConsumableLocation').value,
+            last_updated: new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' })
+        };
+        try {
+            const res = await fetch(`/api/consumables/${id}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
+            if(!res.ok) { const r = await res.json(); return Swal.fire('Error', r.error, 'error'); }
+            document.getElementById('editConsumableModal').classList.remove('active');
+            Swal.fire('Diperbarui!', 'Data bahan berhasil diubah.', 'success');
+            fetchData();
+        } catch(err) { Swal.fire('Error', 'Gagal menyimpan data.', 'error'); }
+    });
 });
+
+// --- CONSUMABLES RENDER & ACTIONS ---
+function getStockBadge(stock, min) {
+    if(stock <= 0) return `<span class="pill pill-danger">Habis</span>`;
+    if(stock <= min) return `<span class="pill pill-warning">${stock} ⚠️</span>`;
+    return `<span class="pill pill-success">${stock}</span>`;
+}
+
+function getStockBar(stock, min) {
+    const max = Math.max(min * 3, stock, 1);
+    const pct = Math.min((stock / max) * 100, 100);
+    let color = '#10b981';
+    if(stock <= 0) color = '#ef4444';
+    else if(stock <= min) color = '#f59e0b';
+    return `<div style="background:#e2e8f0; border-radius:4px; height:6px; width:80px; display:inline-block; vertical-align:middle; margin-left:6px;">
+        <div style="background:${color}; height:100%; border-radius:4px; width:${pct}%; transition:width 0.3s;"></div>
+    </div>`;
+}
+
+function renderConsumables() {
+    const tbody = document.getElementById('consumables-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = consumables.map(c => `
+        <tr>
+            <td style="font-family:monospace; font-weight:600; color:var(--primary);">${c.id}</td>
+            <td style="font-weight:600;">${c.name}</td>
+            <td>${c.category || '-'}</td>
+            <td>${getStockBadge(c.stock, c.min_stock)} ${getStockBar(c.stock, c.min_stock)}</td>
+            <td style="color:var(--text-muted);">${c.min_stock}</td>
+            <td>${c.unit}</td>
+            <td><i class="fa-solid fa-location-dot" style="color:var(--text-muted); margin-right:4px;"></i>${c.location || '-'}</td>
+            <td style="font-size:12px; color:var(--text-muted);">${c.last_updated || '-'}</td>
+            <td>
+                <div style="display:flex; gap:4px;">
+                    <button class="action-btn" title="Ambil Stok" onclick="useStock('${c.id}')" style="color:var(--warning);"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
+                    <button class="action-btn" title="Restok" onclick="restockItem('${c.id}')" style="color:var(--success);"><i class="fa-solid fa-arrow-down-to-bracket"></i></button>
+                    <button class="action-btn" title="Riwayat" onclick="viewItemLogs('${c.id}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
+                    <button class="action-btn" title="Edit" onclick="openEditConsumable('${c.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
+                    ${currentUser && currentUser.role === 'Admin' ? `
+                    <button class="action-btn" title="Hapus" onclick="deleteConsumable('${c.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>` : ''}
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+window.useStock = async function(id) {
+    const item = consumables.find(c => c.id === id);
+    if(!item) return;
+    const { value: formValues } = await Swal.fire({
+        title: `📤 Ambil Stok: ${item.name}`,
+        html: `<p style="margin-bottom:8px; color:var(--text-muted);">Sisa stok: <b>${item.stock} ${item.unit}</b></p>
+            <input id="swal-qty" type="number" min="1" max="${item.stock}" value="1" class="swal2-input" placeholder="Jumlah">
+            <input id="swal-user" type="text" class="swal2-input" placeholder="Nama Pengambil">
+            <input id="swal-note" type="text" class="swal2-input" placeholder="Catatan (opsional)">`,
+        confirmButtonText: 'Ambil Stok',
+        confirmButtonColor: '#f59e0b',
+        showCancelButton: true,
+        cancelButtonText: 'Batal',
+        preConfirm: () => {
+            const qty = parseInt(document.getElementById('swal-qty').value);
+            const user = document.getElementById('swal-user').value;
+            if(!qty || qty <= 0) { Swal.showValidationMessage('Jumlah harus lebih dari 0'); return false; }
+            if(!user) { Swal.showValidationMessage('Nama pengambil wajib diisi'); return false; }
+            if(qty > item.stock) { Swal.showValidationMessage(`Stok tidak cukup! Sisa: ${item.stock}`); return false; }
+            return { quantity: qty, user_name: user, note: document.getElementById('swal-note').value };
+        }
+    });
+    if(formValues) {
+        try {
+            const res = await fetch(`/api/consumables/${id}/use`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formValues) });
+            const data = await res.json();
+            if(!res.ok) return Swal.fire('Gagal', data.error, 'error');
+            Swal.fire('Berhasil!', data.message, 'success');
+            fetchData();
+        } catch(err) { Swal.fire('Error', 'Gagal memproses.', 'error'); }
+    }
+};
+
+window.restockItem = async function(id) {
+    const item = consumables.find(c => c.id === id);
+    if(!item) return;
+    const { value: formValues } = await Swal.fire({
+        title: `📥 Restok: ${item.name}`,
+        html: `<p style="margin-bottom:8px; color:var(--text-muted);">Stok saat ini: <b>${item.stock} ${item.unit}</b></p>
+            <input id="swal-qty" type="number" min="1" value="1" class="swal2-input" placeholder="Jumlah tambahan">
+            <input id="swal-note" type="text" class="swal2-input" placeholder="Catatan (opsional)">`,
+        confirmButtonText: 'Tambah Stok',
+        confirmButtonColor: '#10b981',
+        showCancelButton: true,
+        preConfirm: () => {
+            const qty = parseInt(document.getElementById('swal-qty').value);
+            if(!qty || qty <= 0) { Swal.showValidationMessage('Jumlah harus lebih dari 0'); return false; }
+            return { quantity: qty, user_name: currentUser?.name || 'Staff', note: document.getElementById('swal-note').value };
+        }
+    });
+    if(formValues) {
+        try {
+            const res = await fetch(`/api/consumables/${id}/restock`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formValues) });
+            const data = await res.json();
+            if(!res.ok) return Swal.fire('Gagal', data.error, 'error');
+            Swal.fire('Restok Berhasil!', data.message, 'success');
+            fetchData();
+        } catch(err) { Swal.fire('Error', 'Gagal memproses.', 'error'); }
+    }
+};
+
+window.openEditConsumable = function(id) {
+    const c = consumables.find(x => x.id === id);
+    if(!c) return;
+    document.getElementById('editConsumableId').value = c.id;
+    document.getElementById('editConsumableName').value = c.name;
+    document.getElementById('editConsumableCategory').value = c.category;
+    document.getElementById('editConsumableUnit').value = c.unit;
+    document.getElementById('editConsumableStock').value = c.stock;
+    document.getElementById('editConsumableMinStock').value = c.min_stock;
+    document.getElementById('editConsumableLocation').value = c.location || '';
+    document.getElementById('editConsumableModal').classList.add('active');
+};
+
+window.deleteConsumable = async function(id) {
+    const res = await Swal.fire({ title: 'Hapus Bahan?', text: `Hapus ${id} secara permanen?`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#EF4444', confirmButtonText: 'Hapus' });
+    if(res.isConfirmed) {
+        await fetch(`/api/consumables/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Data bahan berhasil dihapus.', 'success');
+        fetchData();
+    }
+};
+
+window.viewItemLogs = async function(id) {
+    const item = consumables.find(c => c.id === id);
+    try {
+        const res = await fetch(`/api/consumable-logs/${id}`);
+        const logs = await res.json();
+        if(logs.length === 0) return Swal.fire('Riwayat', 'Belum ada riwayat untuk item ini.', 'info');
+        const html = `<div style="text-align:left; max-height:300px; overflow-y:auto;">
+            <table style="width:100%; font-size:13px; border-collapse:collapse;">
+                <tr style="border-bottom:1px solid #e2e8f0;"><th style="padding:6px;">Aksi</th><th style="padding:6px;">Jml</th><th style="padding:6px;">Oleh</th><th style="padding:6px;">Tgl</th></tr>
+                ${logs.map(l => `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Restok'}</td>
+                    <td style="padding:6px; font-weight:600; color:${l.action === 'USE' ? '#ef4444' : '#10b981'};">${l.action === 'USE' ? '-' : '+'}${l.quantity}</td>
+                    <td style="padding:6px;">${l.user_name || '-'}</td>
+                    <td style="padding:6px; font-size:11px; color:#64748b;">${l.created_at || '-'}</td>
+                </tr>`).join('')}
+            </table>
+        </div>`;
+        Swal.fire({ title: `Riwayat: ${item?.name || id}`, html: html, width: 500, confirmButtonColor: '#4F46E5' });
+    } catch(err) { Swal.fire('Error', 'Gagal memuat riwayat.', 'error'); }
+};
+
+window.viewConsumableLogs = async function() {
+    try {
+        const res = await fetch('/api/consumable-logs');
+        const logs = await res.json();
+        if(logs.length === 0) return Swal.fire('Riwayat', 'Belum ada riwayat pemakaian.', 'info');
+        const html = `<div style="text-align:left; max-height:400px; overflow-y:auto;">
+            <table style="width:100%; font-size:13px; border-collapse:collapse;">
+                <tr style="border-bottom:2px solid #e2e8f0;"><th style="padding:8px;">Item</th><th style="padding:8px;">Aksi</th><th style="padding:8px;">Jml</th><th style="padding:8px;">Oleh</th><th style="padding:8px;">Tgl</th></tr>
+                ${logs.slice(0,30).map(l => `<tr style="border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:6px; font-weight:500;">${l.item_name || l.consumable_id}</td>
+                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Restok'}</td>
+                    <td style="padding:6px; font-weight:600; color:${l.action === 'USE' ? '#ef4444' : '#10b981'};">${l.action === 'USE' ? '-' : '+'}${l.quantity} ${l.unit || ''}</td>
+                    <td style="padding:6px;">${l.user_name || '-'}</td>
+                    <td style="padding:6px; font-size:11px; color:#64748b;">${l.created_at || '-'}</td>
+                </tr>`).join('')}
+            </table>
+        </div>`;
+        Swal.fire({ title: '📋 Riwayat Pemakaian Bahan', html: html, width: 650, confirmButtonColor: '#4F46E5' });
+    } catch(err) { Swal.fire('Error', 'Gagal memuat riwayat.', 'error'); }
+};

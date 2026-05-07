@@ -276,6 +276,107 @@ app.get('/api/database/reset', async (req, res) => {
     }
 });
 
+// --- CONSUMABLES (Bahan Habis Pakai) ---
+app.get('/api/consumables', (req, res) => {
+    db.all("SELECT * FROM consumables ORDER BY id DESC", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/consumables', (req, res) => {
+    const { id, name, category, unit, stock, min_stock, location, last_updated } = req.body;
+    db.run(`INSERT INTO consumables (id, name, category, unit, stock, min_stock, location, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, name, category, unit, stock || 0, min_stock || 5, location, last_updated], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Bahan habis pakai ditambahkan!" });
+    });
+});
+
+app.put('/api/consumables/:id', (req, res) => {
+    const { name, category, unit, stock, min_stock, location, last_updated } = req.body;
+    db.run(`UPDATE consumables SET name=?, category=?, unit=?, stock=?, min_stock=?, location=?, last_updated=? WHERE id=?`,
+        [name, category, unit, stock, min_stock, location, last_updated, req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Data bahan diperbarui!" });
+    });
+});
+
+app.delete('/api/consumables/:id', (req, res) => {
+    db.run(`DELETE FROM consumables WHERE id=?`, [req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Bahan dihapus!" });
+    });
+});
+
+// Ambil Stok (kurangi)
+app.post('/api/consumables/:id/use', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
+    });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+
+    const { quantity, user_name, note } = req.body;
+    try {
+        const item = await getAsync("SELECT * FROM consumables WHERE id=?", [req.params.id]);
+        if (!item) return res.status(404).json({ error: "Bahan tidak ditemukan!" });
+        if (item.stock < quantity) return res.status(400).json({ error: `Stok tidak cukup! Sisa: ${item.stock}` });
+
+        const newStock = item.stock - quantity;
+        const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+        await runAsync("UPDATE consumables SET stock=?, last_updated=? WHERE id=?", [newStock, now, req.params.id]);
+        await runAsync("INSERT INTO consumable_logs (consumable_id, action, quantity, user_name, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [req.params.id, 'USE', quantity, user_name, note, now]);
+
+        res.json({ message: `Berhasil mengambil ${quantity} ${item.unit}. Sisa stok: ${newStock}`, stock: newStock });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Restok (tambah)
+app.post('/api/consumables/:id/restock', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
+    });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+
+    const { quantity, user_name, note } = req.body;
+    try {
+        const item = await getAsync("SELECT * FROM consumables WHERE id=?", [req.params.id]);
+        if (!item) return res.status(404).json({ error: "Bahan tidak ditemukan!" });
+
+        const newStock = item.stock + quantity;
+        const now = new Date().toLocaleDateString('id-ID', { day:'2-digit', month:'long', year:'numeric' });
+        await runAsync("UPDATE consumables SET stock=?, last_updated=? WHERE id=?", [newStock, now, req.params.id]);
+        await runAsync("INSERT INTO consumable_logs (consumable_id, action, quantity, user_name, note, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            [req.params.id, 'RESTOCK', quantity, user_name || 'Admin', note, now]);
+
+        res.json({ message: `Restok berhasil! Stok baru: ${newStock}`, stock: newStock });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Riwayat Pemakaian
+app.get('/api/consumable-logs', (req, res) => {
+    db.all(`SELECT cl.*, c.name as item_name, c.unit FROM consumable_logs cl LEFT JOIN consumables c ON cl.consumable_id = c.id ORDER BY cl.id DESC`, [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.get('/api/consumable-logs/:consumable_id', (req, res) => {
+    db.all(`SELECT * FROM consumable_logs WHERE consumable_id=? ORDER BY id DESC`, [req.params.consumable_id], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
 app.listen(PORT, () => {
     console.log(`🚀 Server Inventarisasi berjalan di: http://localhost:${PORT}`);
 });

@@ -50,6 +50,7 @@
                 <ul>
                     <li class="nav-item active" data-target="view-dashboard"><a href="#"><i class="fa-solid fa-house"></i> Dashboard</a></li>
                     <li class="nav-item" data-target="view-daftar-aset"><a href="#"><i class="fa-solid fa-boxes-stacked"></i> Daftar Aset</a></li>
+                    <li class="nav-item" data-target="view-consumables"><a href="#"><i class="fa-solid fa-cubes-stacked"></i> Stok Bahan</a></li>
                     <li class="nav-item" data-target="view-scan-qr"><a href="#"><i class="fa-solid fa-qrcode"></i> Scan QR</a></li>
                     <li class="nav-item" data-target="view-peminjaman"><a href="#"><i class="fa-solid fa-people-carry-box"></i> Pinjam</a></li>
                     <li class="nav-item" data-target="view-maintenance"><a href="#"><i class="fa-solid fa-wrench"></i> Servis</a></li>
@@ -129,6 +130,14 @@
                                 <h3>Rusak / Perlu Servis</h3>
                                 <h2 id="count-rusak">0</h2>
                                 <p>Tindakan perbaikan diperlukan</p>
+                            </div>
+                        </div>
+                        <div class="stat-card" id="card-stok-menipis" style="cursor:pointer;" onclick="document.querySelector('[data-target=view-consumables]').click()">
+                            <div class="stat-icon" style="background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706;"><i class="fa-solid fa-cubes-stacked"></i></div>
+                            <div class="stat-info">
+                                <h3>Stok Bahan Menipis</h3>
+                                <h2 id="count-low-stock">0</h2>
+                                <p>Item di bawah batas minimum</p>
                             </div>
                         </div>
                     </div>
@@ -220,6 +229,71 @@
                                     </tr>
                                 </thead>
                                 <tbody class="daftar-aset-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW: Bahan Habis Pakai -->
+                <div id="view-consumables" class="app-view" style="display: none;">
+                    <div class="page-header">
+                        <div>
+                            <h1>Bahan Habis Pakai</h1>
+                            <p>Kelola stok bahan menyusut & habis pakai.</p>
+                        </div>
+                        <button class="primary-btn btn-tambah-consumable"><i class="fa-solid fa-plus"></i> Tambah Bahan Baru</button>
+                    </div>
+
+                    <div class="stats-grid" style="margin-bottom: 24px;">
+                        <div class="stat-card">
+                            <div class="stat-icon blue"><i class="fa-solid fa-cubes-stacked"></i></div>
+                            <div class="stat-info">
+                                <h3>Total Jenis Bahan</h3>
+                                <h2 id="count-consumable-total">0</h2>
+                                <p>Jenis bahan terdaftar</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon green"><i class="fa-solid fa-check-circle"></i></div>
+                            <div class="stat-info">
+                                <h3>Stok Aman</h3>
+                                <h2 id="count-consumable-safe">0</h2>
+                                <p>Di atas batas minimum</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon red"><i class="fa-solid fa-exclamation-triangle"></i></div>
+                            <div class="stat-info">
+                                <h3>Stok Menipis</h3>
+                                <h2 id="count-consumable-low">0</h2>
+                                <p>Perlu restok segera!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-container fade-in">
+                        <div class="table-header">
+                            <h3>Daftar Stok Bahan</h3>
+                            <div class="table-actions">
+                                <button class="secondary-btn" onclick="viewConsumableLogs()"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="assetTable">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nama Bahan</th>
+                                        <th>Kategori</th>
+                                        <th>Stok</th>
+                                        <th>Min</th>
+                                        <th>Satuan</th>
+                                        <th>Lokasi</th>
+                                        <th>Update</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="consumables-tbody"></tbody>
                             </table>
                         </div>
                     </div>
@@ -641,6 +715,127 @@
                         <tbody id="categories-tbody"></tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Tambah Bahan Habis Pakai -->
+    <div id="addConsumableModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Tambah Bahan Habis Pakai</h2>
+                <button class="close-btn closeAddConsumableBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="addConsumableForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Bahan</label>
+                            <input type="text" id="consumableName" placeholder="Contoh: Kertas A4 80gsm" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select id="consumableCategory" required>
+                                <option value="" disabled selected>Pilih Kategori</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Satuan</label>
+                            <select id="consumableUnit" required>
+                                <option value="pcs">pcs (satuan)</option>
+                                <option value="rim">rim</option>
+                                <option value="botol">botol</option>
+                                <option value="box">box</option>
+                                <option value="pack">pack</option>
+                                <option value="roll">roll</option>
+                                <option value="kg">kg</option>
+                                <option value="liter">liter</option>
+                                <option value="meter">meter</option>
+                                <option value="set">set</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lokasi Penyimpanan</label>
+                            <input type="text" id="consumableLocation" placeholder="Contoh: Gudang Utama" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Awal</label>
+                            <input type="number" id="consumableStock" min="0" value="0" required style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px; background:var(--bg-main); outline:none;">
+                        </div>
+                        <div class="form-group">
+                            <label>Batas Minimum (Alert)</label>
+                            <input type="number" id="consumableMinStock" min="0" value="5" required style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px; background:var(--bg-main); outline:none;">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeAddConsumableBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Simpan Bahan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Edit Bahan Habis Pakai -->
+    <div id="editConsumableModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Bahan Habis Pakai</h2>
+                <button class="close-btn closeEditConsumableBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="editConsumableForm">
+                    <input type="hidden" id="editConsumableId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Nama Bahan</label>
+                            <input type="text" id="editConsumableName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Kategori</label>
+                            <select id="editConsumableCategory" required></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Satuan</label>
+                            <select id="editConsumableUnit" required>
+                                <option value="pcs">pcs (satuan)</option>
+                                <option value="rim">rim</option>
+                                <option value="botol">botol</option>
+                                <option value="box">box</option>
+                                <option value="pack">pack</option>
+                                <option value="roll">roll</option>
+                                <option value="kg">kg</option>
+                                <option value="liter">liter</option>
+                                <option value="meter">meter</option>
+                                <option value="set">set</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Lokasi Penyimpanan</label>
+                            <input type="text" id="editConsumableLocation" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Stok Saat Ini</label>
+                            <input type="number" id="editConsumableStock" min="0" required style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px; background:var(--bg-main); outline:none;">
+                        </div>
+                        <div class="form-group">
+                            <label>Batas Minimum (Alert)</label>
+                            <input type="number" id="editConsumableMinStock" min="0" required style="width:100%; padding:12px 16px; border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:14px; background:var(--bg-main); outline:none;">
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="secondary-btn closeEditConsumableBtn">Batal</button>
+                        <button type="submit" class="primary-btn">Simpan Perubahan</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

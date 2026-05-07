@@ -119,6 +119,27 @@ db.run(`CREATE TABLE IF NOT EXISTS categories (
     name VARCHAR(100) UNIQUE NOT NULL
 )`);
 
+db.run(`CREATE TABLE IF NOT EXISTS consumables (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100),
+    unit VARCHAR(50) DEFAULT 'pcs',
+    stock INTEGER DEFAULT 0,
+    min_stock INTEGER DEFAULT 5,
+    location VARCHAR(100),
+    last_updated VARCHAR(50)
+)`);
+
+db.run(`CREATE TABLE IF NOT EXISTS consumable_logs (
+    id SERIAL PRIMARY KEY,
+    consumable_id VARCHAR(50) NOT NULL,
+    action VARCHAR(20) NOT NULL,
+    quantity INTEGER NOT NULL,
+    user_name VARCHAR(100),
+    note TEXT,
+    created_at VARCHAR(50)
+)`);
+
 // --- Seeder ---
 setTimeout(() => {
     // Seeder Users dan Kategori tetap dipertahankan agar sistem bisa langsung digunakan
@@ -138,11 +159,13 @@ setTimeout(() => {
             db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Tools"]);
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Bahan Habis Pakai"]);
         }
     });
 
     // Migrasi: Tambah kategori baru ke database yang sudah berjalan (ON CONFLICT agar aman)
     db.run("INSERT INTO categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", ["Tools"]);
+    db.run("INSERT INTO categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", ["Bahan Habis Pakai"]);
 }, 1000);
 
 module.exports = db;
