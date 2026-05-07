@@ -137,8 +137,12 @@ setTimeout(() => {
             db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
+            db.run("INSERT INTO categories (name) VALUES (?)", ["Tools"]);
         }
     });
+
+    // Migrasi: Tambah kategori baru ke database yang sudah berjalan (ON CONFLICT agar aman)
+    db.run("INSERT INTO categories (name) VALUES ($1) ON CONFLICT (name) DO NOTHING", ["Tools"]);
 }, 1000);
 
 module.exports = db;
