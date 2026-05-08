@@ -414,6 +414,9 @@ th {
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
     background-color: #F9FAFB;
+    position: sticky;
+    top: 0;
+    z-index: 5;
 }
 
 td {
@@ -1349,4 +1352,25 @@ input[type="text"]:focus, select:focus {
 .pagination-dots {
     color: var(--text-muted);
     padding: 0 4px;
+}
+/* Custom Scrollbar for Aesthetic feel */
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: transparent;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
+}
+
+/* Scrollable Table for Consumables */
+#view-consumables .table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
 }
