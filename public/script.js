@@ -1116,7 +1116,7 @@ document.addEventListener("DOMContentLoaded", () => {
             fetchData();
         } catch(err) { Swal.fire('Error', 'Gagal menyimpan data.', 'error'); }
     });
-}
+});
 
 function updateLaporanSummary() {
     const repTotal = document.getElementById('rep-total');
