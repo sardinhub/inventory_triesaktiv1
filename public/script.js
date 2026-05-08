@@ -8,6 +8,9 @@ let consumables = [];
 let statusChartObj = null;
 let categoryChartObj = null;
 let html5QrcodeScanner = null;
+let currentPage = 1;
+let rowsPerPage = 20;
+let filteredAssetsGlobal = null; // Menyimpan hasil filter untuk pagination
 
 window.populateFilterDropdowns = function() {
     const fCat = document.getElementById('filterCategory');
@@ -157,9 +160,23 @@ function renderCategories() {
     if(conCatEdit) conCatEdit.innerHTML = opts;
 }
 
-function renderAssets() {
+function renderAssets(dataToRender = null) {
     const aBody = document.querySelector(".daftar-aset-tbody");
-    const rows = assets.map(a => `
+    if(!aBody) return;
+
+    // Gunakan data filter jika ada, jika tidak gunakan data aset utama
+    const data = dataToRender || assets;
+    filteredAssetsGlobal = data; // Simpan untuk navigasi halaman
+
+    // Hitung index untuk slicing
+    let displayData = data;
+    if (rowsPerPage !== 'all') {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + parseInt(rowsPerPage);
+        displayData = data.slice(start, end);
+    }
+
+    const rows = displayData.map(a => `
         <tr>
             <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
             <td class="asset-name">${a.name}</td>
@@ -185,9 +202,17 @@ function renderAssets() {
             </td>
         </tr>
     `).join('');
-    if(aBody) aBody.innerHTML = rows;
     
-    // Dropdown Peminjaman: Hanya aset yang "Tersedia"
+    aBody.innerHTML = rows || '<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">Tidak ada data yang sesuai filter.</td></tr>';
+    
+    // Update Pagination UI
+    renderPagination(data.length);
+
+    // Dropdown Peminjaman & Maintenance (Tetap gunakan data asli untuk dropdown)
+    updateDropdowns();
+}
+
+function updateDropdowns() {
     const borrowSelect = document.getElementById('borrowItem');
     if(borrowSelect) {
         borrowSelect.innerHTML = '<option value="">-- Pilih Aset Tersedia --</option>' + 
@@ -195,7 +220,6 @@ function renderAssets() {
                   .map(a => `<option value="${a.id}">${a.id} | ${a.name}</option>`).join('');
     }
     
-    // Dropdown Maintenance: Semua aset yang "Rusak" atau perlu servis
     const maintSelect = document.getElementById('maintItem');
     if(maintSelect) {
         maintSelect.innerHTML = '<option value="">-- Pilih Aset Bermasalah --</option>' + 
@@ -204,6 +228,67 @@ function renderAssets() {
     }
     if(window.populateFilterDropdowns) window.populateFilterDropdowns();
 }
+
+// LOGIKA PAGINATION
+window.renderPagination = function(totalItems) {
+    const info = document.getElementById('paginationInfo');
+    const nav = document.getElementById('paginationNav');
+    if (!info || !nav) return;
+
+    if (rowsPerPage === 'all' || totalItems <= rowsPerPage) {
+        info.innerText = `Menampilkan ${totalItems} data`;
+        nav.innerHTML = '';
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    const startIdx = (currentPage - 1) * rowsPerPage + 1;
+    const endIdx = Math.min(currentPage * rowsPerPage, totalItems);
+
+    info.innerText = `Menampilkan ${startIdx} - ${endIdx} dari ${totalItems} data`;
+
+    let html = `
+        <button class="page-btn" onclick="changePage(1)" ${currentPage === 1 ? 'disabled' : ''} title="Halaman Pertama">
+            <i class="fa-solid fa-angles-left"></i>
+        </button>
+        <button class="page-btn" onclick="changePage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-angle-left"></i>
+        </button>
+    `;
+
+    // Tampilkan maksimal 5 tombol halaman di sekitar halaman aktif
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changePage(${i})">${i}</button>`;
+    }
+
+    html += `
+        <button class="page-btn" onclick="changePage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+            <i class="fa-solid fa-angle-right"></i>
+        </button>
+        <button class="page-btn" onclick="changePage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''} title="Halaman Terakhir">
+            <i class="fa-solid fa-angles-right"></i>
+        </button>
+    `;
+
+    nav.innerHTML = html;
+};
+
+window.changePage = function(page) {
+    currentPage = page;
+    renderAssets(filteredAssetsGlobal);
+    // Scroll table to top smoothly
+    document.querySelector('.table-responsive')?.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.changeRowsPerPage = function(val) {
+    rowsPerPage = val === 'all' ? 'all' : parseInt(val);
+    currentPage = 1;
+    renderAssets(filteredAssetsGlobal);
+};
 
 function renderBorrows() {
     const tbody = document.getElementById("peminjaman-tbody");
@@ -739,7 +824,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return matchesSearch && matchesCat && matchesCond && matchesStat && matchesLoc;
         });
 
-        renderFilteredAssets(filtered);
+        currentPage = 1; // Reset ke halaman 1 saat filter berubah
+        renderAssets(filtered);
     }
 
     // Event Listeners for Filters
@@ -758,36 +844,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
 
-    function renderFilteredAssets(filtered) {
-        const aBody = document.querySelector(".daftar-aset-tbody");
-        const rows = filtered.map(a => `
-            <tr>
-                <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
-                <td class="asset-name">${a.name}</td>
-                <td>${a.brand || '-'}</td>
-                <td>${a.category}</td>
-                <td>${getConditionBadge(a.condition)}</td>
-                <td>${getStatusBadge(a.status)}</td>
-                <td><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
-                <td style="font-weight: 500;">${a.owner}</td>
-                <td>${a.last_updated || '-'}</td>
-                <td>
-                    <div style="display:flex; gap:4px;">
-                        <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
-                        ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
-                        ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
-                        ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
-                        <button class="action-btn" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
-                        ` : ''}
-                        ${currentUser && currentUser.role === 'Admin' ? `
-                        <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
-                        ` : ''}
-                    </div>
-                </td>
-            </tr>
-        `).join('');
-        if(aBody) aBody.innerHTML = rows;
-    }
     
     // SPA Navigation
     const navItems = document.querySelectorAll('.nav-item');

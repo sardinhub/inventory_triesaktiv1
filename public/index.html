@@ -170,7 +170,19 @@
                     <div class="table-container fade-in">
                         <div class="table-header" style="flex-direction: column; align-items: stretch; gap: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <h3>Semua Data</h3>
+                                <div style="display: flex; align-items: center; gap: 20px;">
+                                    <h3>Semua Data</h3>
+                                    <div class="rows-per-page-container">
+                                        <span>Tampilkan:</span>
+                                        <select id="rowsPerPageSelect" onchange="changeRowsPerPage(this.value)">
+                                            <option value="10">10</option>
+                                            <option value="20" selected>20</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="all">Semua</option>
+                                        </select>
+                                    </div>
+                                </div>
                                 <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
                             </div>
                             
@@ -231,6 +243,12 @@
                                 <tbody class="daftar-aset-tbody"></tbody>
                             </table>
                         </div>
+                        <!-- PAGINATION CONTROLS -->
+                        <div class="pagination-container" id="assetPagination">
+                            <div class="pagination-info" id="paginationInfo">Menampilkan 0 - 0 dari 0 data</div>
+                            <div class="pagination-nav" id="paginationNav"></div>
+                        </div>
+                    </div>
                     </div>
                 </div>
 
@@ -377,6 +395,7 @@
                                 <tbody id="maintenance-tbody"></tbody>
                             </table>
                         </div>
+                    </div>
                     </div>
                 </div>
 
