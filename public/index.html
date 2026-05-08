@@ -333,20 +333,23 @@
                     </div>
                 </div>
 
-                <!-- VIEW 3: Scan QR Code -->
+                <!-- VIEW 3: Scan QR -->
                 <div id="view-scan-qr" class="app-view" style="display: none;">
                     <div class="page-header">
                         <div>
-                            <h1>Scan QR Code</h1>
-                            <p>Arahkan kamera ke label QR aset atau masukkan ID manual.</p>
+                            <h1>Scan Barcode / QR</h1>
+                            <p>Arahkan kamera ke QR Code aset untuk identifikasi cepat.</p>
                         </div>
                     </div>
-                    <div class="fade-in" style="display: flex; flex-direction: column; align-items: center; margin-top: 20px;">
-                        <!-- Scanner Div (Diisi otomatis oleh JS library html5-qrcode) -->
-                        <div id="qr-reader" style="width:100%; max-width: 500px; background: white; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg);"></div>
+                    <div class="qr-view-container fade-in">
+                        <div class="qr-glass-card">
+                            <div id="qr-reader" style="width: 100%;"></div>
+                            <p style="margin-top: 16px; color: var(--text-muted); font-size: 14px;">Scanner otomatis mendeteksi kode QR & Barcode</p>
+                        </div>
                         
-                        <div style="display:flex; justify-content:center; gap:8px; margin-top: 20px;">
-                            <input type="text" id="manualQrInput" placeholder="Misal: INV-ELK-001" style="width:250px;">
+                        <div class="qr-input-group">
+                            <i class="fa-solid fa-keyboard" style="padding: 12px; color: var(--primary);"></i>
+                            <input type="text" id="manualQrInput" placeholder="Masukkan ID Aset secara manual..." style="flex: 1;">
                             <button class="primary-btn" onclick="simulateQrScan()">Cari Aset</button>
                         </div>
                     </div>
@@ -356,10 +359,10 @@
                 <div id="view-peminjaman" class="app-view" style="display: none;">
                     <div class="page-header">
                         <div>
-                            <h1>Sistem Peminjaman (Check-in/out)</h1>
-                            <p>Catatan serah terima dan approval barang.</p>
+                            <h1>Manajemen Peminjaman</h1>
+                            <p>Pantau dan kelola permintaan peminjaman aset.</p>
                         </div>
-                        <button class="primary-btn btn-buat-peminjaman"><i class="fa-solid fa-handshake"></i> Buat Permintaan</button>
+                        <button class="primary-btn btn-buat-peminjaman"><i class="fa-solid fa-plus"></i> Buat Request</button>
                     </div>
                     <div class="table-container fade-in">
                         <div class="table-header">
@@ -387,14 +390,14 @@
                 <div id="view-maintenance" class="app-view" style="display: none;">
                     <div class="page-header">
                         <div>
-                            <h1>Jadwal & Tiket Maintenance</h1>
-                            <p>Daftar aset yang memerlukan servis berkala atau perbaikan.</p>
+                            <h1>Maintenance & Perbaikan</h1>
+                            <p>Kelola tiket kerusakan dan jadwal servis aset.</p>
                         </div>
-                        <button class="primary-btn btn-buat-tiket"><i class="fa-solid fa-ticket"></i> Buat Tiket Servis</button>
+                        <button class="primary-btn btn-buat-tiket"><i class="fa-solid fa-ticket"></i> Buat Tiket</button>
                     </div>
                     <div class="table-container fade-in">
                         <div class="table-header">
-                            <h3>Daftar Tiket Terbuka</h3>
+                            <h3>Tiket Maintenance Terbuka</h3>
                         </div>
                         <div class="table-responsive">
                             <table class="assetTable">
@@ -419,16 +422,38 @@
                 <div id="view-laporan" class="app-view" style="display: none;">
                     <div class="page-header">
                         <div>
-                            <h1>Laporan & Analitik Interaktif</h1>
-                            <p>Visualisasi data aset *Real-time*.</p>
+                            <h1>Laporan & Analitik</h1>
+                            <p>Ringkasan data inventaris secara real-time.</p>
                         </div>
-                        <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-file-csv"></i> Download Data Master</button>
+                        <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-file-csv"></i> Ekspor CSV</button>
                     </div>
-                    <div class="glass-panel" style="padding: 40px; text-align: center; margin-top: 20px;">
-                        <i class="fa-solid fa-file-circle-check" style="font-size: 4rem; color: var(--primary); margin-bottom: 20px; opacity: 0.5;"></i>
-                        <h2>Laporan Siap Diunduh</h2>
-                        <p style="color: var(--text-muted); margin-bottom: 25px;">Data inventaris Anda selalu sinkron dengan database pusat.</p>
-                        <button class="primary-btn" onclick="exportToCSV()" style="margin: 0 auto;"><i class="fa-solid fa-file-csv"></i> Ekspor Data Master (CSV)</button>
+                    
+                    <div class="laporan-summary fade-in">
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: var(--primary-light); color: var(--primary);"><i class="fa-solid fa-box"></i></div>
+                            <div class="stat-info"><h3>Total Aset</h3><h2 id="rep-total">0</h2></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);"><i class="fa-solid fa-hand-holding-heart"></i></div>
+                            <div class="stat-info"><h3>Dipinjam</h3><h2 id="rep-borrowed">0</h2></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);"><i class="fa-solid fa-wrench"></i></div>
+                            <div class="stat-info"><h3>Maintenance</h3><h2 id="rep-maint">0</h2></div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                            <div class="stat-info"><h3>Stok Tipis</h3><h2 id="rep-low">0</h2></div>
+                        </div>
+                    </div>
+
+                    <div class="laporan-visual-box fade-in">
+                        <i class="fa-solid fa-file-circle-check" style="font-size: 3rem; color: var(--primary); opacity: 0.6;"></i>
+                        <div style="text-align: center;">
+                            <h2>Laporan Master Siap</h2>
+                            <p style="color: var(--text-muted);">Seluruh data aset, stok bahan, dan riwayat telah disinkronkan.</p>
+                        </div>
+                        <button class="primary-btn" onclick="exportToCSV()" style="width: 250px;"><i class="fa-solid fa-download"></i> Unduh Data Lengkap</button>
                     </div>
                 </div>
 

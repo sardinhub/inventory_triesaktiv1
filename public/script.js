@@ -861,7 +861,10 @@ document.addEventListener("DOMContentLoaded", () => {
             document.getElementById(targetId).style.display = 'block';
             
             // Re-render chart if switching to laporan
-            if(targetId === 'view-laporan') renderCharts();
+            if(targetId === 'view-laporan') {
+                renderCharts();
+                updateLaporanSummary();
+            }
             
             // Auto-start QR Scanner if switching to Scan QR
             if(targetId === 'view-scan-qr' && typeof Html5QrcodeScanner !== 'undefined') {
@@ -1113,7 +1116,19 @@ document.addEventListener("DOMContentLoaded", () => {
             fetchData();
         } catch(err) { Swal.fire('Error', 'Gagal menyimpan data.', 'error'); }
     });
-});
+}
+
+function updateLaporanSummary() {
+    const repTotal = document.getElementById('rep-total');
+    const repBorrowed = document.getElementById('rep-borrowed');
+    const repMaint = document.getElementById('rep-maint');
+    const repLow = document.getElementById('rep-low');
+
+    if(repTotal) repTotal.innerText = assets.length;
+    if(repBorrowed) repBorrowed.innerText = assets.filter(a => a.status === 'Dipinjam').length;
+    if(repMaint) repMaint.innerText = assets.filter(a => a.status === 'Servis').length;
+    if(repLow) repLow.innerText = consumables.filter(c => c.stock <= c.min_stock).length;
+}
 
 // --- CONSUMABLES RENDER & ACTIONS ---
 function getStockBadge(stock, min) {
