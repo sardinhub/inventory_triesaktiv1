@@ -413,10 +413,10 @@ th {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     border-bottom: 1px solid var(--border);
-    background-color: #F9FAFB;
+    background-color: #F9FAFB; /* Penting agar header tidak transparan */
     position: sticky;
     top: 0;
-    z-index: 5;
+    z-index: 10;
 }
 
 td {
@@ -796,7 +796,26 @@ input[type="text"]:focus, select:focus {
 /* --- TABLE RESPONSIVE WRAPPER --- */
 .table-responsive {
     overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 380px); /* Menyesuaikan dengan tinggi layar agar tidak terpotong */
     -webkit-overflow-scrolling: touch;
+    border-radius: 0 0 20px 20px;
+}
+
+/* Custom Scrollbar for Aesthetic feel */
+.table-responsive::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.table-responsive::-webkit-scrollbar-track {
+    background: transparent;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: var(--primary-light);
 }
 
 /* Pengaturan inline: hidden on desktop (shown in sidebar-footer instead) */
