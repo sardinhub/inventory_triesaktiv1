@@ -10,7 +10,9 @@ let categoryChartObj = null;
 let html5QrcodeScanner = null;
 let currentPage = 1;
 let rowsPerPage = 20;
-let filteredAssetsGlobal = null; // Menyimpan hasil filter untuk pagination
+let currentConsumablePage = 1;
+let consumableRowsPerPage = 20;
+let filteredAssetsGlobal = null; 
 
 window.populateFilterDropdowns = function() {
     const fCat = document.getElementById('filterCategory');
@@ -1134,7 +1136,16 @@ function getStockBar(stock, min) {
 function renderConsumables() {
     const tbody = document.getElementById('consumables-tbody');
     if(!tbody) return;
-    tbody.innerHTML = consumables.map(c => `
+
+    // Hitung index untuk slicing
+    let displayData = consumables;
+    if (consumableRowsPerPage !== 'all') {
+        const start = (currentConsumablePage - 1) * consumableRowsPerPage;
+        const end = start + parseInt(consumableRowsPerPage);
+        displayData = consumables.slice(start, end);
+    }
+
+    tbody.innerHTML = displayData.map(c => `
         <tr>
             <td style="font-family:monospace; font-weight:600; color:var(--primary);">${c.id}</td>
             <td style="font-weight:600;">${c.name}</td>
@@ -1157,7 +1168,69 @@ function renderConsumables() {
             </td>
         </tr>
     `).join('');
+
+    // Update Pagination UI for Consumables
+    renderConsumablePagination(consumables.length);
 }
+
+// LOGIKA PAGINATION UNTUK CONSUMABLES
+window.renderConsumablePagination = function(totalItems) {
+    const info = document.getElementById('consumablePaginationInfo');
+    const nav = document.getElementById('consumablePaginationNav');
+    if (!info || !nav) return;
+
+    if (consumableRowsPerPage === 'all' || totalItems <= consumableRowsPerPage) {
+        info.innerText = `Menampilkan ${totalItems} data`;
+        nav.innerHTML = '';
+        return;
+    }
+
+    const totalPages = Math.ceil(totalItems / consumableRowsPerPage);
+    const startIdx = (currentConsumablePage - 1) * consumableRowsPerPage + 1;
+    const endIdx = Math.min(currentConsumablePage * consumableRowsPerPage, totalItems);
+
+    info.innerText = `Menampilkan ${startIdx} - ${endIdx} dari ${totalItems} data`;
+
+    let html = `
+        <button class="page-btn" onclick="changeConsumablePage(1)" ${currentConsumablePage === 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-angles-left"></i>
+        </button>
+        <button class="page-btn" onclick="changeConsumablePage(${currentConsumablePage - 1})" ${currentConsumablePage === 1 ? 'disabled' : ''}>
+            <i class="fa-solid fa-angle-left"></i>
+        </button>
+    `;
+
+    let startPage = Math.max(1, currentConsumablePage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    if (endPage - startPage < 4) startPage = Math.max(1, endPage - 4);
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="page-btn ${i === currentConsumablePage ? 'active' : ''}" onclick="changeConsumablePage(${i})">${i}</button>`;
+    }
+
+    html += `
+        <button class="page-btn" onclick="changeConsumablePage(${currentConsumablePage + 1})" ${currentConsumablePage === totalPages ? 'disabled' : ''}>
+            <i class="fa-solid fa-angle-right"></i>
+        </button>
+        <button class="page-btn" onclick="changeConsumablePage(${totalPages})" ${currentConsumablePage === totalPages ? 'disabled' : ''}>
+            <i class="fa-solid fa-angles-right"></i>
+        </button>
+    `;
+
+    nav.innerHTML = html;
+};
+
+window.changeConsumablePage = function(page) {
+    currentConsumablePage = page;
+    renderConsumables();
+    document.querySelector('#view-consumables .table-responsive')?.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+window.changeConsumableRowsPerPage = function(val) {
+    consumableRowsPerPage = val === 'all' ? 'all' : parseInt(val);
+    currentConsumablePage = 1;
+    renderConsumables();
+};
 
 window.useStock = async function(id) {
     const item = consumables.find(c => c.id === id);

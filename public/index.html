@@ -291,7 +291,18 @@
 
                     <div class="table-container fade-in">
                         <div class="table-header">
-                            <h3>Daftar Stok Bahan</h3>
+                            <div style="display: flex; align-items: center; gap: 20px;">
+                                <h3>Daftar Stok Bahan</h3>
+                                <div class="rows-per-page-container">
+                                    <span>Tampilkan:</span>
+                                    <select id="consumableRowsPerPageSelect" onchange="changeConsumableRowsPerPage(this.value)">
+                                        <option value="10">10</option>
+                                        <option value="20" selected>20</option>
+                                        <option value="50">50</option>
+                                        <option value="all">Semua</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="table-actions">
                                 <button class="secondary-btn" onclick="viewConsumableLogs()"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat</button>
                             </div>
@@ -313,6 +324,11 @@
                                 </thead>
                                 <tbody id="consumables-tbody"></tbody>
                             </table>
+                        </div>
+                        <!-- PAGINATION CONTROLS FOR CONSUMABLES -->
+                        <div class="pagination-container" id="consumablePagination">
+                            <div class="pagination-info" id="consumablePaginationInfo">Menampilkan 0 - 0 dari 0 data</div>
+                            <div class="pagination-nav" id="consumablePaginationNav"></div>
                         </div>
                     </div>
                 </div>

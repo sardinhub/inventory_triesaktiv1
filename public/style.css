@@ -1353,6 +1353,7 @@ input[type="text"]:focus, select:focus {
     color: var(--text-muted);
     padding: 0 4px;
 }
+
 /* Custom Scrollbar for Aesthetic feel */
 .table-responsive::-webkit-scrollbar {
     width: 6px;
@@ -1367,10 +1368,4 @@ input[type="text"]:focus, select:focus {
 }
 .table-responsive::-webkit-scrollbar-thumb:hover {
     background: var(--primary-light);
-}
-
-/* Scrollable Table for Consumables */
-#view-consumables .table-responsive {
-    max-height: 500px;
-    overflow-y: auto;
 }
