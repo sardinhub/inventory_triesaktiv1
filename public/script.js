@@ -1173,7 +1173,7 @@ function renderConsumables() {
             <td>
                 <div style="display:flex; gap:4px;">
                     <button class="action-btn" title="Ambil Stok" onclick="useStock('${c.id}')" style="color:var(--warning);"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
-                    <button class="action-btn" title="Restok" onclick="restockItem('${c.id}')" style="color:var(--success);"><i class="fa-solid fa-arrow-down-to-bracket"></i></button>
+                    <button class="action-btn" title="Terima Stok" onclick="restockItem('${c.id}')" style="color:var(--success);"><i class="fa-solid fa-arrow-down-to-bracket"></i></button>
                     <button class="action-btn" title="Riwayat" onclick="viewItemLogs('${c.id}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
                     ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
                     <button class="action-btn" title="Edit" onclick="openEditConsumable('${c.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
@@ -1284,17 +1284,20 @@ window.restockItem = async function(id) {
     const item = consumables.find(c => c.id === id);
     if(!item) return;
     const { value: formValues } = await Swal.fire({
-        title: `📥 Restok: ${item.name}`,
+        title: `📥 Terima Stok: ${item.name}`,
         html: `<p style="margin-bottom:8px; color:var(--text-muted);">Stok saat ini: <b>${item.stock} ${item.unit}</b></p>
             <input id="swal-qty" type="number" min="1" value="1" class="swal2-input" placeholder="Jumlah tambahan">
+            <input id="swal-user" type="text" class="swal2-input" placeholder="Nama Penerima">
             <input id="swal-note" type="text" class="swal2-input" placeholder="Catatan (opsional)">`,
-        confirmButtonText: 'Tambah Stok',
+        confirmButtonText: 'Terima Stok',
         confirmButtonColor: '#10b981',
         showCancelButton: true,
         preConfirm: () => {
             const qty = parseInt(document.getElementById('swal-qty').value);
+            const user = document.getElementById('swal-user').value;
             if(!qty || qty <= 0) { Swal.showValidationMessage('Jumlah harus lebih dari 0'); return false; }
-            return { quantity: qty, user_name: currentUser?.name || 'Staff', note: document.getElementById('swal-note').value };
+            if(!user) { Swal.showValidationMessage('Nama penerima wajib diisi'); return false; }
+            return { quantity: qty, user_name: user, note: document.getElementById('swal-note').value };
         }
     });
     if(formValues) {
@@ -1302,7 +1305,7 @@ window.restockItem = async function(id) {
             const res = await fetch(`/api/consumables/${id}/restock`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(formValues) });
             const data = await res.json();
             if(!res.ok) return Swal.fire('Gagal', data.error, 'error');
-            Swal.fire('Restok Berhasil!', data.message, 'success');
+            Swal.fire('Terima Stok Berhasil!', data.message, 'success');
             fetchData();
         } catch(err) { Swal.fire('Error', 'Gagal memproses.', 'error'); }
     }
@@ -1340,7 +1343,7 @@ window.viewItemLogs = async function(id) {
             <table style="width:100%; font-size:13px; border-collapse:collapse;">
                 <tr style="border-bottom:1px solid #e2e8f0;"><th style="padding:6px;">Aksi</th><th style="padding:6px;">Jml</th><th style="padding:6px;">Oleh</th><th style="padding:6px;">Tgl</th></tr>
                 ${logs.map(l => `<tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Restok'}</td>
+                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Terima'}</td>
                     <td style="padding:6px; font-weight:600; color:${l.action === 'USE' ? '#ef4444' : '#10b981'};">${l.action === 'USE' ? '-' : '+'}${l.quantity}</td>
                     <td style="padding:6px;">${l.user_name || '-'}</td>
                     <td style="padding:6px; font-size:11px; color:#64748b;">${l.created_at || '-'}</td>
@@ -1361,7 +1364,7 @@ window.viewConsumableLogs = async function() {
                 <tr style="border-bottom:2px solid #e2e8f0;"><th style="padding:8px;">Item</th><th style="padding:8px;">Aksi</th><th style="padding:8px;">Jml</th><th style="padding:8px;">Oleh</th><th style="padding:8px;">Tgl</th></tr>
                 ${logs.slice(0,30).map(l => `<tr style="border-bottom:1px solid #f1f5f9;">
                     <td style="padding:6px; font-weight:500;">${l.item_name || l.consumable_id}</td>
-                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Restok'}</td>
+                    <td style="padding:6px;">${l.action === 'USE' ? '📤 Ambil' : '📥 Terima'}</td>
                     <td style="padding:6px; font-weight:600; color:${l.action === 'USE' ? '#ef4444' : '#10b981'};">${l.action === 'USE' ? '-' : '+'}${l.quantity} ${l.unit || ''}</td>
                     <td style="padding:6px;">${l.user_name || '-'}</td>
                     <td style="padding:6px; font-size:11px; color:#64748b;">${l.created_at || '-'}</td>
