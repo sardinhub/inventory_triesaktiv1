@@ -826,8 +826,19 @@ document.addEventListener("DOMContentLoaded", () => {
             return matchesSearch && matchesCat && matchesCond && matchesStat && matchesLoc;
         });
 
+        const filteredConsumables = consumables.filter(c => {
+            return !term || 
+                c.name.toLowerCase().includes(term) || 
+                c.id.toLowerCase().includes(term) || 
+                (c.category && c.category.toLowerCase().includes(term)) ||
+                (c.location && c.location.toLowerCase().includes(term));
+        });
+
         currentPage = 1; // Reset ke halaman 1 saat filter berubah
         renderAssets(filtered);
+
+        currentConsumablePage = 1;
+        renderConsumables(filteredConsumables);
     }
 
     // Event Listeners for Filters
@@ -843,6 +854,7 @@ document.addEventListener("DOMContentLoaded", () => {
         filterStatus.value = "";
         filterLocation.value = "";
         renderAssets();
+        renderConsumables();
     };
 
 
@@ -1148,19 +1160,21 @@ function getStockBar(stock, min) {
     </div>`;
 }
 
-function renderConsumables() {
+function renderConsumables(dataToRender = null) {
     const tbody = document.getElementById('consumables-tbody');
     if(!tbody) return;
 
+    const data = dataToRender || consumables;
+
     // Hitung index untuk slicing
-    let displayData = consumables;
+    let displayData = data;
     if (consumableRowsPerPage !== 'all') {
         const start = (currentConsumablePage - 1) * consumableRowsPerPage;
         const end = start + parseInt(consumableRowsPerPage);
-        displayData = consumables.slice(start, end);
+        displayData = data.slice(start, end);
     }
 
-    tbody.innerHTML = displayData.map(c => `
+    const rows = displayData.map(c => `
         <tr>
             <td style="font-family:monospace; font-weight:600; color:var(--primary);">${c.id}</td>
             <td style="font-weight:600;">${c.name}</td>
@@ -1184,8 +1198,10 @@ function renderConsumables() {
         </tr>
     `).join('');
 
+    tbody.innerHTML = rows || '<tr><td colspan="9" style="text-align:center; padding:40px; color:var(--text-muted);">Tidak ada stok bahan yang sesuai pencarian.</td></tr>';
+
     // Update Pagination UI for Consumables
-    renderConsumablePagination(consumables.length);
+    renderConsumablePagination(data.length);
 }
 
 // LOGIKA PAGINATION UNTUK CONSUMABLES
