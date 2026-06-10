@@ -1173,7 +1173,7 @@ function renderConsumables() {
             <td>
                 <div style="display:flex; gap:4px;">
                     <button class="action-btn" title="Ambil Stok" onclick="useStock('${c.id}')" style="color:var(--warning);"><i class="fa-solid fa-arrow-up-from-bracket"></i></button>
-                    <button class="action-btn" title="Terima Stok" onclick="restockItem('${c.id}')" style="color:var(--success);"><i class="fa-solid fa-arrow-down-to-bracket"></i></button>
+                    <button class="action-btn" title="Terima Stok" onclick="restockItem('${c.id}')" style="color:#16a34a;"><i class="fa-solid fa-download"></i></button>
                     <button class="action-btn" title="Riwayat" onclick="viewItemLogs('${c.id}')"><i class="fa-solid fa-clock-rotate-left"></i></button>
                     ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
                     <button class="action-btn" title="Edit" onclick="openEditConsumable('${c.id}')"><i class="fa-solid fa-pen"></i></button>` : ''}
