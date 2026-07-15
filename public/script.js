@@ -352,10 +352,41 @@ window.viewAsset = function(id) {
         <div style="margin-top:20px; text-align:center;">
             <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${a.id}" alt="QR Code" style="border-radius:12px; padding:8px; border:1px solid var(--border); background:white;">
             <p style="font-size:12px; margin-top:8px; color:var(--text-muted);">Scan QR Code ini untuk akses cepat via mobile</p>
-            <button class="primary-btn" onclick="printLabel('${a.id}')" style="margin-top: 16px; width: 100%; justify-content: center;"><i class="fa-solid fa-print"></i> Cetak Label Fisik</button>
+            <div style="display:flex; gap:8px; margin-top: 16px;">
+                <button class="primary-btn" onclick="printLabel('${a.id}')" style="flex:1; justify-content: center;"><i class="fa-solid fa-print"></i> Cetak Label</button>
+                <button class="secondary-btn" onclick="duplicateAsset('${a.id}')" style="flex:1; justify-content: center;"><i class="fa-solid fa-copy"></i> Duplikat Aset</button>
+            </div>
         </div>
     `;
     document.getElementById('viewAssetModal').classList.add('active');
+};
+
+window.duplicateAsset = function(id) {
+    const a = assets.find(x => x.id === id);
+    if(!a) return;
+    
+    // Tutup modal view
+    document.getElementById('viewAssetModal').classList.remove('active');
+    
+    // Buka modal tambah
+    document.getElementById('addAssetModal').classList.add('active');
+    
+    // Pre-fill data
+    document.getElementById('assetName').value = a.name;
+    document.getElementById('assetBrand').value = a.brand || '';
+    document.getElementById('assetCategory').value = a.category;
+    document.getElementById('assetQuantity').value = 1;
+    document.getElementById('assetLocation').value = a.location;
+    
+    Swal.fire({
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 3000,
+        icon: 'info',
+        title: 'Mode Duplikat Aktif',
+        text: 'Silakan isi jumlah yang kurang lalu simpan.'
+    });
 };
 
 window.printLabel = function(id) {
