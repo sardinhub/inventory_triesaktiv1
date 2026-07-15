@@ -57,9 +57,10 @@ const db = {
     
     let isInsertUser = query.toUpperCase().includes("INSERT INTO USERS");
     let isInsertCat = query.toUpperCase().includes("INSERT INTO CATEGORIES");
+    let isInsertLoc = query.toUpperCase().includes("INSERT INTO LOCATIONS");
     
     let pgQuery = replacePlaceholders(query);
-    if (isInsertUser || isInsertCat) {
+    if (isInsertUser || isInsertCat || isInsertLoc) {
         pgQuery += " RETURNING id"; // Agar mendapat lastID (perilaku bawaan SQLite)
     }
 
@@ -69,7 +70,7 @@ const db = {
         return;
       }
       let lastID = null;
-      if ((isInsertUser || isInsertCat) && res.rows && res.rows.length > 0) {
+      if ((isInsertUser || isInsertCat || isInsertLoc) && res.rows && res.rows.length > 0) {
           lastID = res.rows[0].id;
       }
       if(callback) callback.call({ lastID: lastID }, null);
@@ -140,6 +141,11 @@ db.run(`CREATE TABLE IF NOT EXISTS consumable_logs (
     created_at VARCHAR(50)
 )`);
 
+db.run(`CREATE TABLE IF NOT EXISTS locations (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL
+)`);
+
 // --- Seeder ---
 setTimeout(() => {
     // Seeder Users dan Kategori tetap dipertahankan agar sistem bisa langsung digunakan
@@ -160,6 +166,15 @@ setTimeout(() => {
             db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Tools"]);
             db.run("INSERT INTO categories (name) VALUES (?)", ["Bahan Habis Pakai"]);
+        }
+    });
+
+    db.get("SELECT COUNT(*) AS count FROM locations", (err, row) => {
+        if (row && parseInt(row.count) === 0) {
+            console.log("Seeding Locations...");
+            db.run("INSERT INTO locations (name) VALUES (?)", ["Gudang Utama"]);
+            db.run("INSERT INTO locations (name) VALUES (?)", ["Ruang Rapat"]);
+            db.run("INSERT INTO locations (name) VALUES (?)", ["Area Produksi"]);
         }
     });
 
