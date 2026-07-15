@@ -167,50 +167,107 @@ function renderAssets(dataToRender = null) {
     const aBody = document.querySelector(".daftar-aset-tbody");
     if(!aBody) return;
 
-    // Gunakan data filter jika ada, jika tidak gunakan data aset utama
     const data = dataToRender || assets;
-    filteredAssetsGlobal = data; // Simpan untuk navigasi halaman
+    filteredAssetsGlobal = data;
 
-    // Hitung index untuk slicing
-    let displayData = data;
+    // 1. Group data by Name + Brand
+    const grouped = {};
+    data.forEach(a => {
+        const key = `${a.name.toLowerCase().trim()}||${(a.brand || '').toLowerCase().trim()}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                name: a.name,
+                brand: a.brand || '-',
+                category: a.category,
+                items: []
+            };
+        }
+        grouped[key].items.push(a);
+    });
+
+    const groups = Object.values(grouped);
+
+    // 2. Pagination on GROUPS
+    let displayGroups = groups;
     if (rowsPerPage !== 'all') {
         const start = (currentPage - 1) * rowsPerPage;
         const end = start + parseInt(rowsPerPage);
-        displayData = data.slice(start, end);
+        displayGroups = groups.slice(start, end);
     }
 
-    const rows = displayData.map(a => `
-        <tr>
-            <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
-            <td class="asset-name">${a.name}</td>
-            <td>${a.brand || '-'}</td>
-            <td style="text-align:center; font-weight:600;">${a.quantity || 1}</td>
-            <td>${a.category}</td>
-            <td>${getConditionBadge(a.condition)}</td>
-            <td>${getStatusBadge(a.status)}</td>
-            <td><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
-            <td style="font-weight: 500;">${a.owner}</td>
-            <td>${a.last_updated || '-'}</td>
-            <td>
-                <div style="display:flex; gap:4px;">
-                    <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
-                    ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
-                    ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
-                    ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
-                    <button class="action-btn" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
-                    ` : ''}
-                    ${currentUser && currentUser.role === 'Admin' ? `
-                    <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
-                    ` : ''}
-                </div>
-            </td>
+    window.toggleGroup = function(groupId) {
+        const children = document.querySelectorAll(`.child-of-${groupId}`);
+        const icon = document.getElementById(`icon-${groupId}`);
+        let isExpanded = false;
+        children.forEach(c => {
+            if (c.style.display === 'none') {
+                c.style.display = 'table-row';
+                isExpanded = true;
+            } else {
+                c.style.display = 'none';
+                isExpanded = false;
+            }
+        });
+        if (icon) {
+            icon.className = isExpanded ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right';
+        }
+    };
+
+    const rows = displayGroups.map((g, idx) => {
+        const groupId = `group-${currentPage}-${idx}`;
+        const totalQty = g.items.length;
+        
+        let html = `
+        <tr class="group-row" style="background:#f8fafc; font-weight:600; cursor:pointer; transition: 0.2s;" onclick="toggleGroup('${groupId}')" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+            <td colspan="2" style="color:var(--primary);"><i id="icon-${groupId}" class="fa-solid fa-chevron-right" style="margin-right:12px; width:12px;"></i> ${g.name}</td>
+            <td>${g.brand}</td>
+            <td style="text-align:center; color:var(--primary); font-size:14px; font-weight:700;">${totalQty}</td>
+            <td>${g.category}</td>
+            <td style="color:#94a3b8;">-</td>
+            <td style="color:#94a3b8;">-</td>
+            <td style="color:#94a3b8;">-</td>
+            <td style="color:#94a3b8;">-</td>
+            <td style="color:#94a3b8;">-</td>
+            <td style="font-size:11px; font-weight:normal; color:var(--text-muted);">(Klik untuk rincian)</td>
         </tr>
-    `).join('');
+        `;
+
+        g.items.forEach((a, cidx) => {
+            html += `
+            <tr class="child-of-${groupId} child-row" style="display:none; background:#ffffff;">
+                <td style="padding-left:36px; border-left:3px solid var(--primary); font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
+                <td style="color:var(--text-muted); font-size:12px;">↳ ${a.name}</td>
+                <td style="color:var(--text-muted); font-size:12px;">${a.brand || '-'}</td>
+                <td style="text-align:center; font-weight:600; color:var(--text-muted); font-size:12px;">1</td>
+                <td style="font-size:12px; color:var(--text-muted);">${a.category}</td>
+                <td>${getConditionBadge(a.condition)}</td>
+                <td>${getStatusBadge(a.status)}</td>
+                <td style="font-size:12px;"><i class="fa-solid fa-location-dot" style="color: var(--text-muted); margin-right: 6px;"></i> ${a.location}</td>
+                <td style="font-weight: 500; font-size:12px;">${a.owner}</td>
+                <td style="font-size:12px;">${a.last_updated || '-'}</td>
+                <td>
+                    <div style="display:flex; gap:4px;">
+                        <button class="action-btn" title="View" onclick="viewAsset('${a.id}')"><i class="fa-solid fa-eye"></i></button>
+                        ${a.status === 'Dipinjam' ? `<button class="action-btn" title="Kembalikan" onclick="returnAsset('${a.id}')" style="color:var(--success);"><i class="fa-solid fa-rotate-left"></i></button>` : ''}
+                        ${a.condition === 'Rusak' && a.status !== 'Servis' ? `<button class="action-btn" title="Servis" onclick="openMaintenance('${a.id}')" style="color:var(--warning);"><i class="fa-solid fa-screwdriver-wrench"></i></button>` : ''}
+                        ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `
+                        <button class="action-btn" title="Edit" onclick="openEditAsset('${a.id}')"><i class="fa-solid fa-pen"></i></button>
+                        ` : ''}
+                        ${currentUser && currentUser.role === 'Admin' ? `
+                        <button class="action-btn admin-only" title="Hapus" onclick="deleteAsset('${a.id}')" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button>
+                        ` : ''}
+                    </div>
+                </td>
+            </tr>
+            `;
+        });
+        return html;
+    }).join('');
     
     aBody.innerHTML = rows || '<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--text-muted);">Tidak ada data yang sesuai filter.</td></tr>';
     
-    // Update Pagination UI
-    renderPagination(data.length);
+    // Update Pagination UI based on GROUPS length
+    renderPagination(groups.length);
 
     // Dropdown Peminjaman & Maintenance (Tetap gunakan data asli untuk dropdown)
     updateDropdowns();
