@@ -13,6 +13,7 @@ let rowsPerPage = 20;
 let currentConsumablePage = 1;
 let consumableRowsPerPage = 20;
 let filteredAssetsGlobal = null; 
+let filteredConsumablesGlobal = null;
 
 window.populateFilterDropdowns = function() {
     const fCat = document.getElementById('filterCategory');
@@ -910,6 +911,170 @@ window.printAssetsAsPDF = function() {
     pw.document.close();
 };
 
+// --- PRINT FUNCTIONS FOR CONSUMABLES ---
+function buildConsumablePrintHTML(title, dataArr, isPreview = false) {
+    const now = new Date().toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const rows = dataArr.map((c, idx) => `
+        <tr class="${idx % 2 === 0 ? 'even' : 'odd'}">
+            <td>${idx + 1}</td>
+            <td>${c.id}</td>
+            <td>${c.name}</td>
+            <td>${c.category || '-'}</td>
+            <td style="text-align:center; font-weight:bold; color:${c.stock <= c.min_stock ? '#ef4444' : '#10b981'}">${c.stock}</td>
+            <td style="text-align:center;">${c.min_stock}</td>
+            <td>${c.unit}</td>
+            <td>${c.location || '-'}</td>
+            <td>${c.last_updated || '-'}</td>
+        </tr>
+    `).join('');
+
+    return `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #1e293b; font-size: 12px; }
+            .print-wrapper { max-width: 1200px; margin: 0 auto; background: white; }
+            /* === HEADER === */
+            .print-header { background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
+            .print-header .brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+            .print-header .brand small { display: block; font-size: 11px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
+            .print-header .meta { text-align: right; font-size: 11px; opacity: 0.9; line-height: 1.8; }
+            /* === TITLE === */
+            .print-title-bar { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 16px 32px; display:flex; justify-content:space-between; align-items:center; }
+            .print-title-bar h1 { font-size: 17px; font-weight: 700; color: #1e293b; }
+            .print-title-bar .stats { display: flex; gap: 24px; }
+            .print-title-bar .stat-item { text-align: center; }
+            .print-title-bar .stat-num { font-size: 20px; font-weight: 700; color: #10b981; }
+            .print-title-bar .stat-lbl { font-size: 10px; color: #64748b; text-transform: uppercase; }
+            /* === TABLE === */
+            .table-wrap { padding: 20px 32px 32px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            thead tr { background: #10b981; color: white; }
+            thead th { padding: 9px 8px; text-align: left; font-weight: 600; white-space: nowrap; }
+            thead th:nth-child(1), thead th:nth-child(5), thead th:nth-child(6) { text-align: center; }
+            tbody tr.even { background: #ffffff; }
+            tbody tr.odd  { background: #f8fafc; }
+            tbody tr:hover { background: #eff6ff; }
+            tbody td { padding: 8px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+            tbody td:nth-child(1), tbody td:nth-child(5), tbody td:nth-child(6) { text-align: center; }
+            /* === FOOTER === */
+            .print-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 32px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#94a3b8; }
+            /* === PREVIEW CONTROLS === */
+            .preview-controls { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #1e293b; color: white; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            .preview-controls h3 { font-size: 14px; }
+            .preview-controls .ctrl-btns { display: flex; gap: 8px; }
+            .ctrl-btn { padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+            .ctrl-btn-primary { background: #10b981; color: white; }
+            .ctrl-btn-primary:hover { background: #059669; }
+            .ctrl-btn-danger  { background: #ef4444; color: white; }
+            .ctrl-btn-danger:hover  { background: #dc2626; }
+            .ctrl-btn-neutral { background: #475569; color: white; }
+            .ctrl-btn-neutral:hover { background: #334155; }
+            body.preview-mode { padding-top: 56px; }
+            @media print {
+                body { background: white; font-size: 10px; }
+                .preview-controls { display: none !important; }
+                body.preview-mode { padding-top: 0; }
+                .print-wrapper { max-width: 100%; }
+            }
+        </style>
+    </head>
+    <body class="${isPreview ? 'preview-mode' : ''}">
+        ${isPreview ? `
+        <div class="preview-controls">
+            <h3>📄 Print Preview — ${dataArr.length} Bahan Habis Pakai</h3>
+            <div class="ctrl-btns">
+                <button class="ctrl-btn ctrl-btn-primary" onclick="window.print()">🖨️ Cetak</button>
+                <button class="ctrl-btn ctrl-btn-danger" onclick="printAsPDF()">📥 Simpan PDF</button>
+                <button class="ctrl-btn ctrl-btn-neutral" onclick="window.close()">✕ Tutup</button>
+            </div>
+        </div>` : ''}
+        <div class="print-wrapper">
+            <div class="print-header">
+                <div class="brand">
+                    📦 INVENTARIS.IO
+                    <small>Sistem Inventarisasi Aset Terpadu</small>
+                </div>
+                <div class="meta">
+                    <strong>${title}</strong><br>
+                    Dicetak: ${now}<br>
+                    Total Data: ${dataArr.length} item
+                </div>
+            </div>
+            <div class="print-title-bar">
+                <h1>Laporan Stok Bahan Habis Pakai</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-num">${dataArr.length}</div>
+                        <div class="stat-lbl">Total Jenis Bahan</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-num" style="color:#10b981;">${dataArr.filter(c => c.stock > c.min_stock).length}</div>
+                        <div class="stat-lbl">Stok Aman</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-num" style="color:#ef4444;">${dataArr.filter(c => c.stock <= c.min_stock).length}</div>
+                        <div class="stat-lbl">Stok Menipis / Habis</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>ID Bahan</th>
+                            <th>Nama Bahan</th>
+                            <th>Kategori</th>
+                            <th>Stok</th>
+                            <th>Batas Min</th>
+                            <th>Satuan</th>
+                            <th>Lokasi</th>
+                            <th>Update Terakhir</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <div class="print-footer">
+                <span>© Inventaris.io — Laporan dicetak pada ${now}</span>
+                <span>Halaman <span id="pg"></span></span>
+            </div>
+        </div>
+        <script>
+            function printAsPDF() {
+                window.print();
+            }
+            ${isPreview ? '' : 'setTimeout(() => { window.print(); }, 800);'}
+        <\/script>
+    </body>
+    </html>`;
+}
+
+window.printPreviewConsumables = function() {
+    const data = filteredConsumablesGlobal || consumables;
+    if(!data || data.length === 0) {
+        return Swal.fire('Tidak Ada Data', 'Tidak ada data stok bahan untuk ditampilkan.', 'warning');
+    }
+    const pw = window.open('', '_blank', 'width=1200,height=800');
+    pw.document.write(buildConsumablePrintHTML('Daftar Stok Bahan Habis Pakai', data, true));
+    pw.document.close();
+};
+
+window.printConsumablesAsPDF = function() {
+    const data = filteredConsumablesGlobal || consumables;
+    if(!data || data.length === 0) {
+        return Swal.fire('Tidak Ada Data', 'Tidak ada data stok bahan untuk dicetak.', 'warning');
+    }
+    const pw = window.open('', '_blank', 'width=1200,height=800');
+    pw.document.write(buildConsumablePrintHTML('Daftar Stok Bahan — Cetak PDF', data, false));
+    pw.document.close();
+};
+
 // --- AUTHENTICATION & INITIALIZATION ---
 function initApp() {
     document.getElementById('login-screen').style.display = 'none';
@@ -1348,6 +1513,7 @@ function renderConsumables(dataToRender = null) {
     if(!tbody) return;
 
     const data = dataToRender || consumables;
+    filteredConsumablesGlobal = data;
 
     // Hitung index untuk slicing
     let displayData = data;
