@@ -183,6 +183,7 @@ function renderAssets(dataToRender = null) {
             <td style="font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
             <td class="asset-name">${a.name}</td>
             <td>${a.brand || '-'}</td>
+            <td style="text-align:center; font-weight:600;">${a.quantity || 1}</td>
             <td>${a.category}</td>
             <td>${getConditionBadge(a.condition)}</td>
             <td>${getStatusBadge(a.status)}</td>
@@ -205,7 +206,7 @@ function renderAssets(dataToRender = null) {
         </tr>
     `).join('');
     
-    aBody.innerHTML = rows || '<tr><td colspan="10" style="text-align:center; padding:40px; color:var(--text-muted);">Tidak ada data yang sesuai filter.</td></tr>';
+    aBody.innerHTML = rows || '<tr><td colspan="11" style="text-align:center; padding:40px; color:var(--text-muted);">Tidak ada data yang sesuai filter.</td></tr>';
     
     // Update Pagination UI
     renderPagination(data.length);
@@ -339,7 +340,8 @@ window.viewAsset = function(id) {
     document.getElementById('viewAssetTitle').innerText = "Detail: " + a.name;
     document.getElementById('viewAssetContent').innerHTML = `
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>ID Aset:</strong> <span style="float:right; color:var(--primary); font-family:monospace; font-weight:bold;">${a.id}</span></div>
-        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Merk & Type:</strong> <span style="float:right;">${a.brand || '-'}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Merk &amp; Type:</strong> <span style="float:right;">${a.brand || '-'}</span></div>
+        <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Jumlah:</strong> <span style="float:right; font-weight:700; color:var(--primary);">${a.quantity || 1} unit</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kategori:</strong> <span style="float:right;">${a.category}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Kondisi:</strong> <span style="float:right;">${getConditionBadge(a.condition)}</span></div>
         <div style="margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px;"><strong>Status:</strong> <span style="float:right;">${getStatusBadge(a.status)}</span></div>
@@ -417,6 +419,7 @@ window.openEditAsset = function(id) {
     document.getElementById('editAssetId').value = a.id;
     document.getElementById('editAssetName').value = a.name;
     document.getElementById('editAssetBrand').value = a.brand || '';
+    document.getElementById('editAssetQuantity').value = a.quantity || 1;
     document.getElementById('editAssetCategory').value = a.category;
     document.getElementById('editAssetCondition').value = a.condition;
     document.getElementById('editAssetStatus').value = a.status;
@@ -717,9 +720,9 @@ function renderCharts() {
 // --- EXPORT TO CSV ---
 window.exportToCSV = function() {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "ID Aset,Nama Barang,Merk & Type,Kategori,Kondisi,Status,Lokasi,Peminjam,Riwayat Terakhir\n";
+    csvContent += "ID Aset,Nama Barang,Merk & Type,Jumlah,Kategori,Kondisi,Status,Lokasi,Peminjam,Riwayat Terakhir\n";
     assets.forEach(a => {
-        csvContent += `"${a.id}","${a.name}","${a.brand || '-'}","${a.category}","${a.condition}","${a.status}","${a.location}","${a.owner}","${a.last_updated || '-'}"\n`;
+        csvContent += `"${a.id}","${a.name}","${a.brand || '-'}","${a.quantity || 1}","${a.category}","${a.condition}","${a.status}","${a.location}","${a.owner}","${a.last_updated || '-'}"\n`;
     });
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -727,6 +730,184 @@ window.exportToCSV = function() {
     link.setAttribute("download", "Laporan_Aset_Kantor.csv");
     document.body.appendChild(link);
     link.click();
+};
+
+// --- PRINT FUNCTIONS ---
+function buildPrintHTML(title, dataArr, isPreview = false) {
+    const now = new Date().toLocaleString('id-ID', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const rows = dataArr.map((a, idx) => `
+        <tr class="${idx % 2 === 0 ? 'even' : 'odd'}">
+            <td>${idx + 1}</td>
+            <td>${a.id}</td>
+            <td>${a.name}</td>
+            <td>${a.brand || '-'}</td>
+            <td style="text-align:center;">${a.quantity || 1}</td>
+            <td>${a.category}</td>
+            <td>${a.condition}</td>
+            <td>${a.status}</td>
+            <td>${a.location}</td>
+            <td>${a.owner || '-'}</td>
+            <td>${a.last_updated || '-'}</td>
+        </tr>
+    `).join('');
+
+    return `
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: 'Arial', sans-serif; background: #f5f5f5; color: #1e293b; font-size: 12px; }
+            .print-wrapper { max-width: 1200px; margin: 0 auto; background: white; }
+            /* === HEADER === */
+            .print-header { background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white; padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
+            .print-header .brand { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+            .print-header .brand small { display: block; font-size: 11px; font-weight: 400; opacity: 0.85; margin-top: 2px; }
+            .print-header .meta { text-align: right; font-size: 11px; opacity: 0.9; line-height: 1.8; }
+            /* === TITLE === */
+            .print-title-bar { background: #f8fafc; border-bottom: 2px solid #e2e8f0; padding: 16px 32px; display:flex; justify-content:space-between; align-items:center; }
+            .print-title-bar h1 { font-size: 17px; font-weight: 700; color: #1e293b; }
+            .print-title-bar .stats { display: flex; gap: 24px; }
+            .print-title-bar .stat-item { text-align: center; }
+            .print-title-bar .stat-num { font-size: 20px; font-weight: 700; color: #4F46E5; }
+            .print-title-bar .stat-lbl { font-size: 10px; color: #64748b; text-transform: uppercase; }
+            /* === TABLE === */
+            .table-wrap { padding: 20px 32px 32px; }
+            table { width: 100%; border-collapse: collapse; font-size: 11px; }
+            thead tr { background: #4F46E5; color: white; }
+            thead th { padding: 9px 8px; text-align: left; font-weight: 600; white-space: nowrap; }
+            thead th:nth-child(1), thead th:nth-child(5) { text-align: center; }
+            tbody tr.even { background: #ffffff; }
+            tbody tr.odd  { background: #f8fafc; }
+            tbody tr:hover { background: #eff6ff; }
+            tbody td { padding: 8px 8px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+            tbody td:nth-child(1), tbody td:nth-child(5) { text-align: center; font-weight: 700; }
+            .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+            .badge-ok   { background: #d1fae5; color: #065f46; }
+            .badge-warn { background: #fef3c7; color: #92400e; }
+            .badge-bad  { background: #fee2e2; color: #991b1b; }
+            /* === FOOTER === */
+            .print-footer { background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 14px 32px; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#94a3b8; }
+            /* === PREVIEW CONTROLS === */
+            .preview-controls { position: fixed; top: 0; left: 0; right: 0; z-index: 9999; background: #1e293b; color: white; padding: 10px 24px; display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+            .preview-controls h3 { font-size: 14px; }
+            .preview-controls .ctrl-btns { display: flex; gap: 8px; }
+            .ctrl-btn { padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; font-size: 12px; display: flex; align-items: center; gap: 6px; }
+            .ctrl-btn-primary { background: #4F46E5; color: white; }
+            .ctrl-btn-primary:hover { background: #4338ca; }
+            .ctrl-btn-danger  { background: #ef4444; color: white; }
+            .ctrl-btn-danger:hover  { background: #dc2626; }
+            .ctrl-btn-neutral { background: #475569; color: white; }
+            .ctrl-btn-neutral:hover { background: #334155; }
+            body.preview-mode { padding-top: 56px; }
+            @media print {
+                body { background: white; font-size: 10px; }
+                .preview-controls { display: none !important; }
+                body.preview-mode { padding-top: 0; }
+                .print-wrapper { max-width: 100%; }
+            }
+        </style>
+    </head>
+    <body class="${isPreview ? 'preview-mode' : ''}">
+        ${isPreview ? `
+        <div class="preview-controls">
+            <h3>📄 Print Preview — ${dataArr.length} Aset</h3>
+            <div class="ctrl-btns">
+                <button class="ctrl-btn ctrl-btn-primary" onclick="window.print()">🖨️ Cetak</button>
+                <button class="ctrl-btn ctrl-btn-danger" onclick="printAsPDF()">📥 Simpan PDF</button>
+                <button class="ctrl-btn ctrl-btn-neutral" onclick="window.close()">✕ Tutup</button>
+            </div>
+        </div>` : ''}
+        <div class="print-wrapper">
+            <div class="print-header">
+                <div class="brand">
+                    📦 INVENTARIS.IO
+                    <small>Sistem Inventarisasi Aset Terpadu</small>
+                </div>
+                <div class="meta">
+                    <strong>${title}</strong><br>
+                    Dicetak: ${now}<br>
+                    Total Data: ${dataArr.length} aset
+                </div>
+            </div>
+            <div class="print-title-bar">
+                <h1>Laporan Daftar Aset</h1>
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-num">${dataArr.length}</div>
+                        <div class="stat-lbl">Total</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-num" style="color:#10b981;">${dataArr.filter(a => a.status === 'Tersedia').length}</div>
+                        <div class="stat-lbl">Tersedia</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-num" style="color:#f59e0b;">${dataArr.filter(a => a.status === 'Dipinjam').length}</div>
+                        <div class="stat-lbl">Dipinjam</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-num" style="color:#ef4444;">${dataArr.filter(a => a.condition === 'Rusak').length}</div>
+                        <div class="stat-lbl">Rusak</div>
+                    </div>
+                </div>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>ID Aset</th>
+                            <th>Nama Barang</th>
+                            <th>Merk &amp; Type</th>
+                            <th>Jml</th>
+                            <th>Kategori</th>
+                            <th>Kondisi</th>
+                            <th>Status</th>
+                            <th>Lokasi</th>
+                            <th>PIC / Peminjam</th>
+                            <th>Update Terakhir</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+            <div class="print-footer">
+                <span>© Inventaris.io — Laporan dicetak pada ${now}</span>
+                <span>Halaman <span id="pg"></span></span>
+            </div>
+        </div>
+        <script>
+            function printAsPDF() {
+                // Trigger browser Save as PDF dialog
+                window.print();
+            }
+            // Auto-print if not preview
+            ${isPreview ? '' : 'setTimeout(() => { window.print(); }, 800);'}
+        <\/script>
+    </body>
+    </html>`;
+}
+
+window.printPreviewAssets = function() {
+    const data = filteredAssetsGlobal || assets;
+    if(!data || data.length === 0) {
+        return Swal.fire('Tidak Ada Data', 'Tidak ada aset untuk ditampilkan.', 'warning');
+    }
+    const pw = window.open('', '_blank', 'width=1200,height=800');
+    pw.document.write(buildPrintHTML('Daftar Aset Lengkap', data, true));
+    pw.document.close();
+};
+
+window.printAssetsAsPDF = function() {
+    const data = filteredAssetsGlobal || assets;
+    if(!data || data.length === 0) {
+        return Swal.fire('Tidak Ada Data', 'Tidak ada aset untuk dicetak.', 'warning');
+    }
+    const pw = window.open('', '_blank', 'width=1200,height=800');
+    pw.document.write(buildPrintHTML('Daftar Aset — Cetak PDF', data, false));
+    pw.document.close();
 };
 
 // --- AUTHENTICATION & INITIALIZATION ---
@@ -938,6 +1119,7 @@ document.addEventListener("DOMContentLoaded", () => {
             id: `INV-${document.getElementById('assetCategory').value.substring(0,3).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
             name: document.getElementById('assetName').value,
             brand: document.getElementById('assetBrand').value,
+            quantity: parseInt(document.getElementById('assetQuantity').value) || 1,
             category: document.getElementById('assetCategory').value,
             condition: document.getElementById('assetCondition').value,
             status: document.getElementById('assetStatus').value,
@@ -980,6 +1162,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = {
             name: document.getElementById('editAssetName').value,
             brand: document.getElementById('editAssetBrand').value,
+            quantity: parseInt(document.getElementById('editAssetQuantity').value) || 1,
             category: document.getElementById('editAssetCategory').value,
             condition: document.getElementById('editAssetCondition').value,
             status: document.getElementById('editAssetStatus').value,

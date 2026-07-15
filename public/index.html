@@ -183,7 +183,11 @@
                                         </select>
                                     </div>
                                 </div>
-                                <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
+                                <div style="display: flex; gap: 8px;">
+                                    <button class="secondary-btn" onclick="printPreviewAssets()" title="Print Preview"><i class="fa-solid fa-eye"></i> Preview</button>
+                                    <button class="secondary-btn" onclick="printAssetsAsPDF()" title="Cetak / Simpan PDF" style="color: var(--danger); border-color: var(--danger);"><i class="fa-solid fa-file-pdf"></i> Cetak PDF</button>
+                                    <button class="secondary-btn" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> Export CSV</button>
+                                </div>
                             </div>
                             
                             <!-- ADVANCED FILTER BAR -->
@@ -230,7 +234,8 @@
                                     <tr>
                                         <th>ID Aset</th>
                                         <th>Nama Barang</th>
-                                        <th>Merk & Type</th>
+                                        <th>Merk &amp; Type</th>
+                                        <th>Jumlah</th>
                                         <th>Kategori</th>
                                         <th>Kondisi</th>
                                         <th>Status</th>
@@ -519,8 +524,17 @@
                             <input type="text" id="assetName" placeholder="Contoh: Laptop Kerja" required>
                         </div>
                         <div class="form-group">
-                            <label>Merk & Type</label>
+                            <label>Merk &amp; Type</label>
                             <input type="text" id="assetBrand" placeholder="Contoh: Dell XPS 13" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Jumlah (Unit)</label>
+                            <input type="number" id="assetQuantity" placeholder="Contoh: 1" min="1" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <!-- Placeholder spacer -->
                         </div>
                     </div>
                     <div class="form-row">
@@ -589,8 +603,17 @@
                             <input type="text" id="editAssetName" required>
                         </div>
                         <div class="form-group">
-                            <label>Merk & Type</label>
+                            <label>Merk &amp; Type</label>
                             <input type="text" id="editAssetBrand" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Jumlah (Unit)</label>
+                            <input type="number" id="editAssetQuantity" min="1" value="1" required>
+                        </div>
+                        <div class="form-group">
+                            <!-- Placeholder spacer -->
                         </div>
                     </div>
                     <div class="form-row">
