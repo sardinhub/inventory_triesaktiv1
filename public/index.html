@@ -491,9 +491,16 @@
 
                         <div class="setting-card">
                             <i class="fa-solid fa-tags" style="font-size: 24px; color: var(--success); margin-bottom: 16px;"></i>
-                            <h3>Master Data Dropdown</h3>
-                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Tambahkan Kategori Aset baru, Label Lokasi, atau Departemen agar muncul di pilihan formulir.</p>
-                            <button class="secondary-btn" onclick="openCategoriesModal()">Edit Master Data</button>
+                            <h3>Kelola Master Kategori</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Tambahkan Kategori Aset baru agar muncul di pilihan formulir.</p>
+                            <button class="secondary-btn" onclick="openCategoriesModal()">Kelola Kategori</button>
+                        </div>
+                        
+                        <div class="setting-card">
+                            <i class="fa-solid fa-map-location-dot" style="font-size: 24px; color: var(--info); margin-bottom: 16px;"></i>
+                            <h3>Kelola Master Lokasi</h3>
+                            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Atur daftar Lokasi atau Ruangan resmi untuk menghindari kesalahan input (typo).</p>
+                            <button class="secondary-btn" onclick="openLocationsModal()">Kelola Lokasi</button>
                         </div>
 
                         <div class="setting-card">
@@ -567,7 +574,9 @@
                         </div>
                         <div class="form-group">
                             <label>Lokasi Saat Ini</label>
-                            <input type="text" id="assetLocation" placeholder="Contoh: Gudang Utama" required>
+                            <select id="assetLocation" required>
+                                <option value="" disabled selected>Pilih Lokasi</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -647,7 +656,9 @@
                         </div>
                         <div class="form-group">
                             <label>Lokasi Saat Ini</label>
-                            <input type="text" id="editAssetLocation" required>
+                            <select id="editAssetLocation" required>
+                                <option value="" disabled selected>Pilih Lokasi</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -843,7 +854,9 @@
                         </div>
                         <div class="form-group">
                             <label>Lokasi Penyimpanan</label>
-                            <input type="text" id="consumableLocation" placeholder="Contoh: Gudang Utama" required>
+                            <select id="consumableLocation" required>
+                                <option value="" disabled selected>Pilih Lokasi</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -903,7 +916,9 @@
                         </div>
                         <div class="form-group">
                             <label>Lokasi Penyimpanan</label>
-                            <input type="text" id="editConsumableLocation" required>
+                            <select id="editConsumableLocation" required>
+                                <option value="" disabled selected>Pilih Lokasi</option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -921,6 +936,28 @@
                         <button type="submit" class="primary-btn">Simpan Perubahan</button>
                     </div>
                 </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 8: Kelola Master Lokasi -->
+    <div id="locationsModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Kelola Master Lokasi</h2>
+                <button class="close-btn closeLocBtn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="addLocForm" style="display:flex; gap:8px; margin-bottom:20px;">
+                    <input type="text" id="newLocName" placeholder="Contoh: Ruang Server 1" required style="flex:1;">
+                    <button type="submit" class="primary-btn">Tambah</button>
+                </form>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="assetTable">
+                        <thead><tr><th>Nama Lokasi</th><th style="width:50px;">Aksi</th></tr></thead>
+                        <tbody id="locations-tbody"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>

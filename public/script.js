@@ -3,6 +3,7 @@ let assets = [];
 let borrows = [];
 let tickets = [];
 let categories = [];
+let locations = [];
 let users = [];
 let consumables = [];
 let statusChartObj = null;
@@ -21,19 +22,16 @@ window.populateFilterDropdowns = function() {
     
     if(!assets || assets.length === 0) return;
 
-    const cats = [...new Set(assets.map(a => a.category))].filter(Boolean).sort();
-    const locs = [...new Set(assets.map(a => a.location))].filter(Boolean).sort();
-
     if(fCat) {
         const currentVal = fCat.value;
         fCat.innerHTML = '<option value="">Semua Kategori</option>' + 
-            cats.map(c => `<option value="${c}">${c}</option>`).join('');
+            categories.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
         fCat.value = currentVal;
     }
     if(fLoc) {
         const currentVal = fLoc.value;
         fLoc.innerHTML = '<option value="">Semua Lokasi</option>' + 
-            locs.map(l => `<option value="${l}">${l}</option>`).join('');
+            locations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
         fLoc.value = currentVal;
     }
 };
@@ -100,16 +98,18 @@ window.showNotifications = function() {
 // --- API FETCHERS ---
 async function fetchData() {
     try {
-        const [resAssets, resBorrows, resTickets, resCats, resConsumables] = await Promise.all([
-            fetch('/api/assets'), fetch('/api/borrows'), fetch('/api/tickets'), fetch('/api/categories'), fetch('/api/consumables')
+        const [resAssets, resBorrows, resTickets, resCats, resLocs, resConsumables] = await Promise.all([
+            fetch('/api/assets'), fetch('/api/borrows'), fetch('/api/tickets'), fetch('/api/categories'), fetch('/api/locations'), fetch('/api/consumables')
         ]);
         assets = await resAssets.json();
         borrows = await resBorrows.json();
         tickets = await resTickets.json();
         categories = await resCats.json();
+        locations = await resLocs.json();
         consumables = await resConsumables.json();
         
         renderCategories();
+        renderLocations();
         renderAssets();
         renderBorrows();
         renderTickets();
@@ -161,6 +161,22 @@ function renderCategories() {
     const conCatEdit = document.getElementById('editConsumableCategory');
     if(conCat) conCat.innerHTML = `<option value="" disabled selected>Pilih Kategori</option>` + opts;
     if(conCatEdit) conCatEdit.innerHTML = opts;
+}
+
+function renderLocations() {
+    const opts = locations.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+    
+    // Asset Locations
+    const addLoc = document.getElementById('assetLocation');
+    const editLoc = document.getElementById('editAssetLocation');
+    if(addLoc) addLoc.innerHTML = `<option value="" disabled selected>Pilih Lokasi</option>` + opts;
+    if(editLoc) editLoc.innerHTML = `<option value="" disabled selected>Pilih Lokasi</option>` + opts;
+    
+    // Consumable Locations
+    const conLoc = document.getElementById('consumableLocation');
+    const conLocEdit = document.getElementById('editConsumableLocation');
+    if(conLoc) conLoc.innerHTML = `<option value="" disabled selected>Pilih Lokasi</option>` + opts;
+    if(conLocEdit) conLocEdit.innerHTML = `<option value="" disabled selected>Pilih Lokasi</option>` + opts;
 }
 
 function renderAssets(dataToRender = null) {
@@ -673,6 +689,40 @@ window.deleteCategory = async function(id) {
         categories = await resCats.json();
         renderCategories();
         renderCategoriesTable();
+    }
+};
+
+window.openLocationsModal = async function() {
+    document.getElementById('locationsModal').classList.add('active');
+    renderLocationsTable();
+};
+
+window.renderLocationsTable = function() {
+    const tbody = document.getElementById('locations-tbody');
+    if(!tbody) return;
+    tbody.innerHTML = locations.map(l => `
+        <tr>
+            <td>${l.name}</td>
+            <td><button class="action-btn" onclick="deleteLocation(${l.id})" style="color:var(--danger);"><i class="fa-solid fa-trash"></i></button></td>
+        </tr>
+    `).join('');
+};
+
+window.deleteLocation = async function(id) {
+    const res = await Swal.fire({
+        title: 'Hapus Lokasi?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#EF4444',
+        confirmButtonText: 'Hapus'
+    });
+    if(res.isConfirmed) {
+        await fetch(`/api/locations/${id}`, { method: 'DELETE' });
+        Swal.fire('Terhapus!', 'Lokasi telah dihapus.', 'success');
+        const resLocs = await fetch('/api/locations');
+        locations = await resLocs.json();
+        renderLocations();
+        renderLocationsTable();
     }
 };
 
@@ -1347,6 +1397,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setupModal('.closeEditBtn', 'editAssetModal', '.closeEditBtn');
     setupModal('.closeUsersBtn', 'usersModal', '.closeUsersBtn');
     setupModal('.closeCatBtn', 'categoriesModal', '.closeCatBtn');
+    setupModal('.closeLocBtn', 'locationsModal', '.closeLocBtn');
 
     document.querySelectorAll('.btn-tambah-aset').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1519,6 +1570,20 @@ document.addEventListener("DOMContentLoaded", () => {
         categories = await resCats.json();
         renderCategories();
         renderCategoriesTable();
+    });
+
+    // POST: Tambah Lokasi
+    document.getElementById('addLocForm')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('newLocName').value;
+        await fetch('/api/locations', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name}) });
+        document.getElementById('newLocName').value = "";
+        
+        // Refresh local locations
+        const resLocs = await fetch('/api/locations');
+        locations = await resLocs.json();
+        renderLocations();
+        renderLocationsTable();
     });
 
     // POST: Tambah User

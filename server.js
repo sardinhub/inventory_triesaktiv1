@@ -19,6 +19,7 @@ app.get('/api/init', async (req, res) => {
         await runAsync(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, asset_id TEXT, issue_desc TEXT, priority TEXT, status TEXT)`);
         await runAsync(`CREATE TABLE IF NOT EXISTS consumables (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), unit VARCHAR(50) DEFAULT 'pcs', stock INTEGER DEFAULT 0, min_stock INTEGER DEFAULT 5, location VARCHAR(100), last_updated VARCHAR(50))`);
         await runAsync(`CREATE TABLE IF NOT EXISTS consumable_logs (id SERIAL PRIMARY KEY, consumable_id VARCHAR(50) NOT NULL, action VARCHAR(20) NOT NULL, quantity INTEGER NOT NULL, user_name VARCHAR(100), note TEXT, created_at VARCHAR(50))`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)`);
         
         // Migrasi kolom jika sudah ada tabel lama
         try { await runAsync("ALTER TABLE borrows ADD COLUMN date_return TEXT"); } catch(e){}
@@ -237,6 +238,29 @@ app.delete('/api/categories/:id', (req, res) => {
     });
 });
 
+// --- LOCATIONS MANAGEMENT ---
+app.get('/api/locations', (req, res) => {
+    db.all("SELECT * FROM locations", [], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
+
+app.post('/api/locations', (req, res) => {
+    const { name } = req.body;
+    db.run("INSERT INTO locations (name) VALUES (?)", [name], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Lokasi ditambahkan!", id: this.lastID });
+    });
+});
+
+app.delete('/api/locations/:id', (req, res) => {
+    db.run("DELETE FROM locations WHERE id=?", [req.params.id], function(err) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json({ message: "Lokasi dihapus!" });
+    });
+});
+
 // --- SEEDER MANUAL ---
 app.get('/api/seed', (req, res) => {
     try {
@@ -246,8 +270,11 @@ app.get('/api/seed', (req, res) => {
         db.run("INSERT INTO categories (name) VALUES (?)", ["Furniture"]);
         db.run("INSERT INTO categories (name) VALUES (?)", ["Kendaraan"]);
         db.run("INSERT INTO categories (name) VALUES (?)", ["Alat Tulis Kantor"]);
+        db.run("INSERT INTO locations (name) VALUES (?)", ["Gudang Utama"]);
+        db.run("INSERT INTO locations (name) VALUES (?)", ["Ruang Meeting A"]);
+        db.run("INSERT INTO locations (name) VALUES (?)", ["Ruang Manager"]);
         db.run("INSERT INTO assets (id, name, brand, category, condition, status, location, owner, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-            ["INV-ELK-001", "Laptop Lenovo", "Lenovo", "Elektronik", "Bagus", "Tersedia", "Gudang", "-", new Date().toISOString().split('T')[0]]);
+            ["INV-ELK-001", "Laptop Lenovo", "Lenovo", "Elektronik", "Bagus", "Tersedia", "Gudang Utama", "-", new Date().toISOString().split('T')[0]]);
         
         res.json({ message: "🎉 SUKSES! Akun Admin dan data awal berhasil dibuat! Silakan kembali ke halaman awal dan lakukan Login." });
     } catch (e) {
