@@ -1270,9 +1270,15 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById('addAssetForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const qty = parseInt(document.getElementById('assetQuantity').value) || 1;
+        const assetName = document.getElementById('assetName').value;
+        const msg = qty > 1 
+            ? `Anda akan menambahkan ${qty} unit "${assetName}". Sistem akan membuat ${qty} data terpisah.`
+            : "Pastikan data yang Anda masukkan sudah benar.";
+
         const conf = await Swal.fire({
             title: 'Simpan Data Aset?',
-            text: "Pastikan data yang Anda masukkan sudah benar.",
+            text: msg,
             icon: 'question',
             showCancelButton: true,
             confirmButtonColor: '#4F46E5',
@@ -1280,33 +1286,49 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         if(!conf.isConfirmed) return;
 
-        const data = {
-            id: `INV-${document.getElementById('assetCategory').value.substring(0,3).toUpperCase()}-${Math.floor(Math.random()*1000).toString().padStart(3,'0')}`,
-            name: document.getElementById('assetName').value,
-            brand: document.getElementById('assetBrand').value,
-            quantity: parseInt(document.getElementById('assetQuantity').value) || 1,
-            category: document.getElementById('assetCategory').value,
-            condition: document.getElementById('assetCondition').value,
-            status: document.getElementById('assetStatus').value,
-            location: document.getElementById('assetLocation').value,
-            owner: document.getElementById('assetOwner').value || "-",
-            last_updated: document.getElementById('assetLastUpdated').value
-        };
+        const cat = document.getElementById('assetCategory').value;
+        const catPrefix = cat.substring(0,3).toUpperCase();
         
         try {
-            const res = await fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) });
-            const result = await res.json();
+            const requests = [];
+            for(let i = 0; i < qty; i++) {
+                // Generate unique ID using timestamp and index to avoid collisions in loop
+                const uniqueRandom = Math.floor(Math.random() * 900) + 100; // 100-999
+                const id = `INV-${catPrefix}-${uniqueRandom}-${i}`;
+                
+                const data = {
+                    id: id,
+                    name: assetName,
+                    brand: document.getElementById('assetBrand').value,
+                    quantity: 1, // Memaksa quantity = 1 karena record dipisah
+                    category: cat,
+                    condition: document.getElementById('assetCondition').value,
+                    status: document.getElementById('assetStatus').value,
+                    location: document.getElementById('assetLocation').value,
+                    owner: document.getElementById('assetOwner').value || "-",
+                    last_updated: document.getElementById('assetLastUpdated').value
+                };
+                
+                requests.push(
+                    fetch('/api/assets', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data) })
+                );
+            }
             
-            if(!res.ok) {
-                Swal.fire('Peringatan Database', result.error || 'Terjadi kesalahan jaringan.', 'error');
-                return;
+            // Tunggu semua request selesai
+            const responses = await Promise.all(requests);
+            
+            // Cek jika ada yang gagal
+            const failed = responses.filter(r => !r.ok);
+            if(failed.length > 0) {
+                Swal.fire('Peringatan Database', `Berhasil menyimpan ${qty - failed.length} aset. Gagal menyimpan ${failed.length} aset.`, 'warning');
+            } else {
+                Swal.fire('Tersimpan!', `${qty} aset baru berhasil ditambahkan.`, 'success');
             }
 
             document.getElementById('addAssetModal').classList.remove('active');
-            Swal.fire('Tersimpan!', 'Aset baru berhasil ditambahkan.', 'success');
             fetchData();
         } catch(err) {
-            Swal.fire('Error Sistem', 'Tidak dapat terhubung ke server.', 'error');
+            Swal.fire('Error Sistem', 'Tidak dapat terhubung ke server saat menyimpan.', 'error');
         }
     });
 

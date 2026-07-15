@@ -612,10 +612,12 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Jumlah (Unit)</label>
-                            <input type="number" id="editAssetQuantity" min="1" value="1" required>
+                            <input type="number" id="editAssetQuantity" min="1" value="1" disabled style="background: var(--bg-main); cursor: not-allowed; opacity: 0.7;" title="Setiap record mewakili 1 fisik aset (Opsi 1)">
                         </div>
-                        <div class="form-group">
-                            <!-- Placeholder spacer -->
+                        <div class="form-group" style="display:flex; align-items:center;">
+                            <span style="font-size:12px; color:var(--text-muted); margin-top:20px;">
+                                <i class="fa-solid fa-circle-info text-blue"></i> Terkunci: Satu ID untuk satu fisik.
+                            </span>
                         </div>
                     </div>
                     <div class="form-row">
