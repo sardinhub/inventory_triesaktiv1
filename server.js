@@ -19,7 +19,7 @@ app.get('/api/init', async (req, res) => {
         await runAsync(`CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, asset_id TEXT, issue_desc TEXT, priority TEXT, status TEXT)`);
         await runAsync(`CREATE TABLE IF NOT EXISTS consumables (id VARCHAR(50) PRIMARY KEY, name VARCHAR(255) NOT NULL, category VARCHAR(100), unit VARCHAR(50) DEFAULT 'pcs', stock INTEGER DEFAULT 0, min_stock INTEGER DEFAULT 5, location VARCHAR(100), last_updated VARCHAR(50))`);
         await runAsync(`CREATE TABLE IF NOT EXISTS consumable_logs (id SERIAL PRIMARY KEY, consumable_id VARCHAR(50) NOT NULL, action VARCHAR(20) NOT NULL, quantity INTEGER NOT NULL, user_name VARCHAR(100), note TEXT, created_at VARCHAR(50))`);
-        await runAsync(`CREATE TABLE IF NOT EXISTS locations (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)`);
+        await runAsync(`CREATE TABLE IF NOT EXISTS locations (id SERIAL PRIMARY KEY, name VARCHAR(100) UNIQUE NOT NULL)`);
         
         // Migrasi kolom jika sudah ada tabel lama
         try { await runAsync("ALTER TABLE borrows ADD COLUMN date_return TEXT"); } catch(e){}
