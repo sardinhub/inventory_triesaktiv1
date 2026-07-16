@@ -237,7 +237,12 @@ function renderAssets(dataToRender = null) {
         <tr class="group-row" style="background:#f8fafc; font-weight:600; cursor:pointer; transition: 0.2s;" onclick="toggleGroup('${groupId}')" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
             <td colspan="2" style="color:var(--primary);"><i id="icon-${groupId}" class="fa-solid fa-chevron-right" style="margin-right:12px; width:12px;"></i> ${g.name}</td>
             <td>${g.brand}</td>
-            <td style="text-align:center; color:var(--primary); font-size:14px; font-weight:700;">${totalQty}</td>
+            <td style="text-align:center; color:var(--primary); font-size:14px; font-weight:700;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    ${totalQty}
+                    ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `<button class="action-btn" title="Edit Jumlah Unit" onclick="event.stopPropagation(); window.openEditGroupQty('${g.items[0].id}', ${totalQty})" style="color: var(--warning); padding: 4px; display: inline-flex; width: 24px; height: 24px;"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                </div>
+            </td>
             <td>${g.category}</td>
             <td style="color:#94a3b8;">-</td>
             <td style="color:#94a3b8;">-</td>
@@ -1913,4 +1918,51 @@ window.viewConsumableLogs = async function() {
         </div>`;
         Swal.fire({ title: '📋 Riwayat Pemakaian Bahan', html: html, width: 650, confirmButtonColor: '#4F46E5' });
     } catch(err) { Swal.fire('Error', 'Gagal memuat riwayat.', 'error'); }
+};
+
+window.openEditGroupQty = async function(baseAssetId, currentQty) {
+    const res = await Swal.fire({
+        title: 'Edit Jumlah Unit',
+        text: 'Masukkan jumlah total unit yang baru:',
+        input: 'number',
+        inputValue: currentQty,
+        inputAttributes: {
+            min: 1,
+            step: 1
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Simpan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#4F46E5',
+    });
+
+    if (res.isConfirmed && res.value) {
+        const newQty = parseInt(res.value);
+        if (newQty === currentQty) return;
+
+        Swal.fire({
+            title: 'Menyimpan...',
+            text: 'Sedang memperbarui jumlah unit...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const req = await fetch('/api/assets/adjust-qty', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ baseAssetId, newQuantity: newQty })
+            });
+
+            if (req.ok) {
+                Swal.fire('Berhasil', 'Jumlah unit berhasil diperbarui', 'success');
+                fetchData();
+            } else {
+                const err = await req.json();
+                Swal.fire('Error', err.error || 'Gagal memperbarui jumlah', 'error');
+            }
+        } catch (error) {
+            Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+        }
+    }
 };

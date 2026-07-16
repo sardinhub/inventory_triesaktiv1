@@ -95,6 +95,53 @@ app.delete('/api/assets/:id', (req, res) => {
     });
 });
 
+app.post('/api/assets/adjust-qty', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
+    });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+    const allAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.all(query, params, (err, rows) => { if (err) reject(err); else resolve(rows); });
+    });
+
+    const { baseAssetId, newQuantity } = req.body;
+    try {
+        const baseAsset = await getAsync("SELECT * FROM assets WHERE id = ?", [baseAssetId]);
+        if (!baseAsset) return res.status(404).json({ error: "Base asset not found" });
+
+        const sameAssets = await allAsync("SELECT * FROM assets WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND LOWER(TRIM(COALESCE(brand, ''))) = LOWER(TRIM(COALESCE(?, '')))", [baseAsset.name, baseAsset.brand]);
+        
+        const currentQuantity = sameAssets.length;
+        const diff = newQuantity - currentQuantity;
+
+        if (diff > 0) {
+            const catPrefix = (baseAsset.category || 'UNK').substring(0,3).toUpperCase();
+            for (let i = 0; i < diff; i++) {
+                const uniqueRandom = Math.floor(Math.random() * 900) + 100;
+                const id = `INV-${catPrefix}-${uniqueRandom}-${Date.now().toString().slice(-4)}${i}`;
+                await runAsync(`INSERT INTO assets (id, name, brand, category, condition, status, location, owner, last_updated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, 
+                    [id, baseAsset.name, baseAsset.brand, baseAsset.category, baseAsset.condition, baseAsset.status, baseAsset.location, baseAsset.owner, baseAsset.last_updated]);
+            }
+        } else if (diff < 0) {
+            const toRemove = Math.abs(diff);
+            sameAssets.sort((a, b) => {
+                if (a.status === 'Tersedia' && b.status !== 'Tersedia') return -1;
+                if (a.status !== 'Tersedia' && b.status === 'Tersedia') return 1;
+                return 0;
+            });
+            for (let i = 0; i < toRemove; i++) {
+                await runAsync("DELETE FROM assets WHERE id = ?", [sameAssets[i].id]);
+            }
+        }
+
+        res.json({ message: "Quantity adjusted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- BORROWS ---
 app.get('/api/borrows', (req, res) => {
     db.all(`SELECT b.*, a.name as asset_name FROM borrows b LEFT JOIN assets a ON b.asset_id = a.id ORDER BY b.id DESC`, [], (err, rows) => {
