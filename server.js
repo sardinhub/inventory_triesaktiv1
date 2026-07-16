@@ -142,6 +142,31 @@ app.post('/api/assets/adjust-qty', async (req, res) => {
     }
 });
 
+app.post('/api/assets/adjust-details', async (req, res) => {
+    const runAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.run(query, params, function(err) { if (err) reject(err); else resolve(this); });
+    });
+    const getAsync = (query, params = []) => new Promise((resolve, reject) => {
+        db.get(query, params, (err, row) => { if (err) reject(err); else resolve(row); });
+    });
+
+    const { baseAssetId, newName, newBrand } = req.body;
+    try {
+        const baseAsset = await getAsync("SELECT * FROM assets WHERE id = ?", [baseAssetId]);
+        if (!baseAsset) return res.status(404).json({ error: "Base asset not found" });
+
+        // Update all assets with the same original name and brand
+        await runAsync(
+            "UPDATE assets SET name = ?, brand = ? WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND LOWER(TRIM(COALESCE(brand, ''))) = LOWER(TRIM(COALESCE(?, '')))",
+            [newName, newBrand, baseAsset.name, baseAsset.brand]
+        );
+
+        res.json({ message: "Details adjusted successfully" });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // --- BORROWS ---
 app.get('/api/borrows', (req, res) => {
     db.all(`SELECT b.*, a.name as asset_name FROM borrows b LEFT JOIN assets a ON b.asset_id = a.id ORDER BY b.id DESC`, [], (err, rows) => {

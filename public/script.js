@@ -235,7 +235,12 @@ function renderAssets(dataToRender = null) {
         
         let html = `
         <tr class="group-row" style="background:#f8fafc; font-weight:600; cursor:pointer; transition: 0.2s;" onclick="toggleGroup('${groupId}')" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
-            <td colspan="2" style="color:var(--primary);"><i id="icon-${groupId}" class="fa-solid fa-chevron-right" style="margin-right:12px; width:12px;"></i> ${g.name}</td>
+            <td colspan="2" style="color:var(--primary);">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span><i id="icon-${groupId}" class="fa-solid fa-chevron-right" style="margin-right:12px; width:12px;"></i> ${g.name}</span>
+                    ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `<button class="action-btn" title="Edit Nama & Merek" onclick="event.stopPropagation(); window.openEditGroupDetails('${g.items[0].id}')" style="color: var(--warning); padding: 4px; display: inline-flex; width: 24px; height: 24px;"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
+                </div>
+            </td>
             <td>${g.brand}</td>
             <td style="text-align:center; color:var(--primary); font-size:14px; font-weight:700;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -1966,3 +1971,64 @@ window.openEditGroupQty = async function(baseAssetId, currentQty) {
         }
     }
 };
+
+window.openEditGroupDetails = async function(baseAssetId) {
+    const a = assets.find(x => x.id === baseAssetId);
+    if (!a) return;
+
+    const res = await Swal.fire({
+        title: 'Edit Nama & Merek',
+        html: `
+            <div style="text-align: left;">
+                <label style="font-size: 14px; margin-bottom: 5px; display: block; font-weight: 500;">Nama Barang</label>
+                <input id="swal-input-name" class="swal2-input" value="${a.name}" style="width: 100%; box-sizing: border-box; margin: 0 0 15px 0;">
+                <label style="font-size: 14px; margin-bottom: 5px; display: block; font-weight: 500;">Merek & Tipe</label>
+                <input id="swal-input-brand" class="swal2-input" value="${a.brand || ''}" style="width: 100%; box-sizing: border-box; margin: 0;">
+            </div>
+        `,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Simpan',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#4F46E5',
+        preConfirm: () => {
+            const name = document.getElementById('swal-input-name').value;
+            const brand = document.getElementById('swal-input-brand').value;
+            if (!name) {
+                Swal.showValidationMessage('Nama barang wajib diisi');
+            }
+            return { name, brand };
+        }
+    });
+
+    if (res.isConfirmed && res.value) {
+        const { name, brand } = res.value;
+        if (name === a.name && brand === (a.brand || '')) return; // no changes
+
+        Swal.fire({
+            title: 'Menyimpan...',
+            text: 'Sedang memperbarui nama & merek unit...',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
+        });
+
+        try {
+            const req = await fetch('/api/assets/adjust-details', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ baseAssetId, newName: name, newBrand: brand })
+            });
+
+            if (req.ok) {
+                Swal.fire('Berhasil', 'Nama & Merek berhasil diperbarui', 'success');
+                fetchData();
+            } else {
+                const err = await req.json();
+                Swal.fire('Error', err.error || 'Gagal memperbarui', 'error');
+            }
+        } catch (error) {
+            Swal.fire('Error', 'Terjadi kesalahan sistem', 'error');
+        }
+    }
+};
+
