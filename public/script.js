@@ -207,6 +207,9 @@ function renderAssets(dataToRender = null) {
     });
 
     const groups = Object.values(grouped);
+    
+    // Sort groups alphabetically by name (ascending)
+    groups.sort((a, b) => a.name.localeCompare(b.name));
 
     // 2. Pagination on GROUPS
     let displayGroups = groups;
