@@ -15,6 +15,7 @@ let currentConsumablePage = 1;
 let consumableRowsPerPage = 20;
 let filteredAssetsGlobal = null; 
 let filteredConsumablesGlobal = null;
+let expandedGroupKeys = new Set();
 
 window.populateFilterDropdowns = function() {
     const fCat = document.getElementById('filterCategory');
@@ -110,10 +111,14 @@ async function fetchData() {
         
         renderCategories();
         renderLocations();
-        renderAssets();
+        if (window.applyFilters) {
+            window.applyFilters(true);
+        } else {
+            renderAssets();
+            renderConsumables();
+        }
         renderBorrows();
         renderTickets();
-        renderConsumables();
         updateDashboardCards();
         renderCharts();
         populateFilterDropdowns();
@@ -211,7 +216,7 @@ function renderAssets(dataToRender = null) {
         displayGroups = groups.slice(start, end);
     }
 
-    window.toggleGroup = function(groupId) {
+    window.toggleGroup = function(groupId, groupKey) {
         const children = document.querySelectorAll(`.child-of-${groupId}`);
         const icon = document.getElementById(`icon-${groupId}`);
         let isExpanded = false;
@@ -227,17 +232,27 @@ function renderAssets(dataToRender = null) {
         if (icon) {
             icon.className = isExpanded ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right';
         }
+        
+        if (groupKey) {
+            if (isExpanded) {
+                expandedGroupKeys.add(groupKey);
+            } else {
+                expandedGroupKeys.delete(groupKey);
+            }
+        }
     };
 
     const rows = displayGroups.map((g, idx) => {
         const groupId = `group-${currentPage}-${idx}`;
+        const groupKey = `${g.name.toLowerCase().trim()}||${(g.brand || '').toLowerCase().trim()}`;
+        const isInitiallyExpanded = expandedGroupKeys.has(groupKey);
         const totalQty = g.items.length;
         
         let html = `
-        <tr class="group-row" style="background:#f8fafc; font-weight:600; cursor:pointer; transition: 0.2s;" onclick="toggleGroup('${groupId}')" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+        <tr class="group-row" style="background:#f8fafc; font-weight:600; cursor:pointer; transition: 0.2s;" onclick="toggleGroup('${groupId}', '${groupKey.replace(/'/g, "\\'")}')" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
             <td colspan="2" style="color:var(--primary);">
                 <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span><i id="icon-${groupId}" class="fa-solid fa-chevron-right" style="margin-right:12px; width:12px;"></i> ${g.name}</span>
+                    <span><i id="icon-${groupId}" class="${isInitiallyExpanded ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'}" style="margin-right:12px; width:12px;"></i> ${g.name}</span>
                     ${currentUser && (currentUser.role === 'Admin' || currentUser.role === 'Staff') ? `<button class="action-btn" title="Edit Nama & Merek" onclick="event.stopPropagation(); window.openEditGroupDetails('${g.items[0].id}')" style="color: var(--warning); padding: 4px; display: inline-flex; width: 24px; height: 24px;"><i class="fa-solid fa-pen-to-square"></i></button>` : ''}
                 </div>
             </td>
@@ -260,7 +275,7 @@ function renderAssets(dataToRender = null) {
 
         g.items.forEach((a, cidx) => {
             html += `
-            <tr class="child-of-${groupId} child-row" style="display:none; background:#ffffff;">
+            <tr class="child-of-${groupId} child-row" style="display:${isInitiallyExpanded ? 'table-row' : 'none'}; background:#ffffff;">
                 <td style="padding-left:36px; border-left:3px solid var(--primary); font-family: monospace; font-weight: 600; color: var(--primary);">${a.id}</td>
                 <td style="color:var(--text-muted); font-size:12px;">↳ ${a.name}</td>
                 <td style="color:var(--text-muted); font-size:12px;">${a.brand || '-'}</td>
@@ -1299,7 +1314,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const filterStatus = document.getElementById('filterStatus');
     const filterLocation = document.getElementById('filterLocation');
 
-    function applyFilters() {
+    window.applyFilters = function(preservePage = false) {
         const term = searchInput.value.toLowerCase();
         const cat = filterCategory.value;
         const cond = filterCondition.value;
@@ -1328,17 +1343,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 (c.location && c.location.toLowerCase().includes(term));
         });
 
-        currentPage = 1; // Reset ke halaman 1 saat filter berubah
-        renderAssets(filtered);
+        if (!preservePage) {
+            currentPage = 1; // Reset ke halaman 1 saat filter berubah
+            currentConsumablePage = 1;
+        }
 
-        currentConsumablePage = 1;
+        renderAssets(filtered);
         renderConsumables(filteredConsumables);
-    }
+    };
 
     // Event Listeners for Filters
     [searchInput, filterCategory, filterCondition, filterStatus, filterLocation].forEach(el => {
-        el?.addEventListener('change', applyFilters);
-        if(el === searchInput) el?.addEventListener('input', applyFilters);
+        el?.addEventListener('change', () => window.applyFilters());
+        if(el === searchInput) el?.addEventListener('input', () => window.applyFilters());
     });
 
     window.resetFilters = function() {
